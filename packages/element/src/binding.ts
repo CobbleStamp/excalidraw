@@ -24,7 +24,11 @@ import {
 } from "@excalidraw/math";
 
 import type { LineSegment, LocalPoint, Radians } from "@excalidraw/math";
-import type { AppState, NullableGridSize } from "@excalidraw/excalidraw/types";
+import type {
+  AppState,
+  NormalizedZoomValue,
+  NullableGridSize,
+} from "@excalidraw/excalidraw/types";
 import type { MapEntry, Mutable } from "@excalidraw/common/utility-types";
 import type { Bounds } from "@excalidraw/common";
 
@@ -3206,4 +3210,101 @@ export const bindBindingElementToFixedPoint = (
     startOrEnd,
     scene,
   );
+};
+
+/**
+ * excalidraw-web: when a file opens, attaches every loose arrow or line
+ * endpoint by the same rule as dragging one: an endpoint within the snap
+ * distance of a shape's outline (either side) snaps onto the closest such
+ * shape (tie: the one on top). Judged at 100% zoom, so a file opens the same
+ * whatever the viewport. Both ends landing on one shape bind "inside" at
+ * their current positions, as a drag onto the same shape does, so e.g. a
+ * divider line inside a box keeps its place.
+ */
+export const attachLooseEndpoints = (scene: Scene): void => {
+  const zoom = { value: 1 as NormalizedZoomValue };
+  const elements = scene.getNonDeletedElements();
+  const elementsMap = scene.getNonDeletedElementsMap();
+  const shapesToReanchor = new Set<NonDeleted<ExcalidrawBindableElement>>();
+
+  for (const element of elements) {
+    if (!isBindingElement(element, false) || element.points.length < 2) {
+      continue;
+    }
+    const arrow = element as NonDeleted<ExcalidrawArrowElement>;
+    const startPoint = LinearElementEditor.getPointAtIndexGlobalCoordinates(
+      arrow,
+      0,
+      elementsMap,
+    );
+    const endPoint = LinearElementEditor.getPointAtIndexGlobalCoordinates(
+      arrow,
+      -1,
+      elementsMap,
+    );
+    const startHit = arrow.startBinding
+      ? null
+      : getHoveredElementForBinding(startPoint, elements, elementsMap, zoom);
+    const endHit = arrow.endBinding
+      ? null
+      : getHoveredElementForBinding(endPoint, elements, elementsMap, zoom);
+    if (!startHit && !endHit) {
+      continue;
+    }
+
+    const startShapeId = arrow.startBinding?.elementId ?? startHit?.id;
+    const endShapeId = arrow.endBinding?.elementId ?? endHit?.id;
+    const bothOnOneShape = !!startShapeId && startShapeId === endShapeId;
+
+    const attach = (
+      hit: NonDeleted<ExcalidrawBindableElement>,
+      point: GlobalPoint,
+      startOrEnd: "start" | "end",
+    ) => {
+      if (bothOnOneShape) {
+        bindBindingElement(
+          arrow,
+          hit,
+          "inside",
+          startOrEnd,
+          scene,
+          zoom,
+          point,
+        );
+        return;
+      }
+      const focusPoint =
+        projectFixedPointOntoDiagonal(
+          arrow,
+          point,
+          hit,
+          startOrEnd,
+          elementsMap,
+          zoom,
+          false,
+        ) || point;
+      bindBindingElement(
+        arrow,
+        hit,
+        "orbit",
+        startOrEnd,
+        scene,
+        zoom,
+        focusPoint,
+      );
+      shapesToReanchor.add(hit);
+    };
+
+    if (startHit) {
+      attach(startHit, startPoint, "start");
+    }
+    if (endHit) {
+      attach(endHit, endPoint, "end");
+    }
+  }
+
+  // move the newly attached endpoints onto their shapes' outlines
+  for (const shape of shapesToReanchor) {
+    updateBoundElements(shape, scene);
+  }
 };

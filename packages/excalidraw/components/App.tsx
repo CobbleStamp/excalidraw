@@ -115,6 +115,7 @@ import {
   getObservedAppState,
   getCommonBounds,
   getElementAbsoluteCoords,
+  attachLooseEndpoints,
   bindOrUnbindBindingElements,
   fixBindingsAfterDeletion,
   getHoveredElementForBinding,
@@ -13326,6 +13327,7 @@ class App extends React.Component<AppProps, AppState> {
           replaceFiles: true,
           captureUpdate: CaptureUpdateAction.IMMEDIATELY,
         });
+        attachLooseEndpoints(this.scene);
         this.notifySceneFileEvent({
           type: "opened",
           fileHandle: ret.data.appState?.fileHandle ?? null,

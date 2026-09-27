@@ -1,6 +1,6 @@
 import { KEYS, THEME } from "@excalidraw/common";
 
-import { CaptureUpdateAction } from "@excalidraw/element";
+import { attachLooseEndpoints, CaptureUpdateAction } from "@excalidraw/element";
 
 import type { ExcalidrawElement, Theme } from "@excalidraw/element/types";
 
@@ -427,6 +427,7 @@ export const actionLoadScene = register({
         files,
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
+      attachLooseEndpoints(app.scene);
       app.notifySceneFileEvent({
         type: "opened",
         fileHandle: loadedAppState.fileHandle ?? null,

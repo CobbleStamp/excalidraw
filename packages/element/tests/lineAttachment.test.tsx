@@ -16,6 +16,7 @@ import {
 import type { NormalizedZoomValue } from "@excalidraw/excalidraw/types";
 
 import {
+  attachLooseEndpoints,
   DEFAULT_SNAP_DISTANCE_SCREEN_PX,
   getSnapDistanceScreenPx,
   maxBindingDistance_simple,
@@ -165,6 +166,112 @@ describe("files that record an attachment on the arrow only", () => {
       expect(Math.abs(endY - 500)).toBeLessThanOrEqual(1);
     });
   }
+});
+
+describe("attaching loose endpoints when a file opens", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    reseed(7);
+    mouse.reset();
+    await render(<Excalidraw handleKeyboardGlobally />);
+  });
+
+  const makeBox = () =>
+    API.createElement({
+      id: "box",
+      type: "rectangle",
+      x: 300,
+      y: 300,
+      width: 300,
+      height: 150,
+    });
+  const makeArrow = (id: string, x: number, endY: number) =>
+    ({
+      ...API.createElement({
+        id,
+        type: "arrow",
+        x,
+        y: 100,
+        width: 0,
+        height: endY - 100,
+      }),
+      points: [
+        [0, 0],
+        [0, endY - 100],
+      ],
+      startBinding: null,
+      endBinding: null,
+    } as unknown as ExcalidrawLinearElement);
+
+  it("attaches an endpoint within the snap distance, onto the boundary", () => {
+    const box = makeBox();
+    const near = makeArrow("near", 450, 290);
+    API.setElements([box, near]);
+
+    attachLooseEndpoints(h.app.scene);
+
+    const attached = API.getElement(near);
+    expect(attached.endBinding?.elementId).toBe("box");
+    const endY = attached.y + attached.points[attached.points.length - 1][1];
+    expect(Math.abs(endY - 300)).toBeLessThanOrEqual(1);
+    expect(API.getElement(box).boundElements).toEqual([
+      { type: "arrow", id: "near" },
+    ]);
+  });
+
+  it("leaves an endpoint beyond the snap distance loose", () => {
+    const box = makeBox();
+    const far = makeArrow("far", 450, 270);
+    API.setElements([box, far]);
+
+    attachLooseEndpoints(h.app.scene);
+
+    expect(API.getElement(far).endBinding).toBeNull();
+  });
+
+  it("attaches a line with both ends on one shape where it lies", () => {
+    const box = makeBox();
+    const divider = {
+      ...API.createElement({
+        id: "divider",
+        type: "line",
+        x: 300,
+        y: 340,
+        width: 300,
+        height: 0,
+      }),
+      points: [
+        [0, 0],
+        [300, 0],
+      ],
+    } as unknown as ExcalidrawLinearElement;
+    API.setElements([box, divider]);
+
+    attachLooseEndpoints(h.app.scene);
+
+    const attached = API.getElement(divider);
+    expect(attached.startBinding?.elementId).toBe("box");
+    expect(attached.endBinding?.elementId).toBe("box");
+    expect([attached.x, attached.y, attached.points[1][0]]).toEqual([
+      300, 340, 300,
+    ]);
+  });
+
+  it("follows the shape afterwards", () => {
+    const box = makeBox();
+    const near = makeArrow("near", 450, 290);
+    API.setElements([box, near]);
+    attachLooseEndpoints(h.app.scene);
+
+    mouse.clickAt(300, 300);
+    mouse.downAt(300, 375);
+    mouse.moveTo(300, 575);
+    mouse.up();
+
+    const moved = API.getElement(near);
+    const endY = moved.y + moved.points[moved.points.length - 1][1];
+    expect(Math.abs(endY - 500)).toBeLessThanOrEqual(1);
+  });
 });
 
 describe("drawing and moving attached lines", () => {
