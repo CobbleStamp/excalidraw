@@ -186,7 +186,8 @@ export const getContainedElements = (
   const isEligible = (element: NonDeletedExcalidrawElement): boolean =>
     !movingIds.has(element.id) &&
     !element.isDeleted &&
-    !element.locked &&
+    // locked elements move with their container, as locked frame children
+    // move with their frame (owner decision, excalidraw-web)
     // bound text already moves with its own container
     !("containerId" in element && element.containerId) &&
     !isFrameLikeElement(element);

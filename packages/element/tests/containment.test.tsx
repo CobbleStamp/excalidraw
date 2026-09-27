@@ -297,6 +297,24 @@ describe("moving a container moves what it contains", () => {
     expect(positionOf(text)).toEqual({ x: 40 + moved.x, y: 40 + moved.y });
   });
 
+  it("moves a locked element inside the container along with it", () => {
+    const container = makeContainer();
+    const locked = API.createElement({
+      id: "locked",
+      type: "rectangle",
+      x: 40,
+      y: 40,
+      width: 50,
+      height: 50,
+      locked: true,
+    });
+    API.setElements([container, locked]);
+
+    dragBy(container, 120, 80);
+
+    expect(positionOf(locked)).toEqual({ x: 160, y: 120 });
+  });
+
   it("8. puts the container and its contents back with one undo", () => {
     const container = makeContainer();
     const text = makeTextInside();

@@ -79,8 +79,13 @@ describe("element locking", () => {
       backgroundColor: "red",
       fillStyle: "solid",
     });
+    // excalidraw-web: offset by 10 so the locked rectangle covers the click
+    // point without lying inside `rectangle` (contents, locked or not, move
+    // with their container)
     const lockedRectangle = API.createElement({
       type: "rectangle",
+      x: 10,
+      y: 0,
       width: 100,
       backgroundColor: "red",
       fillStyle: "solid",
@@ -92,7 +97,7 @@ describe("element locking", () => {
     mouse.downAt(50, 50);
     mouse.moveTo(100, 100);
     mouse.upAt(100, 100);
-    expect(lockedRectangle).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(lockedRectangle).toEqual(expect.objectContaining({ x: 10, y: 0 }));
     expect(rectangle).toEqual(expect.objectContaining({ x: 0, y: 0 }));
 
     // once selected, the locked element above should be ignored
@@ -100,7 +105,7 @@ describe("element locking", () => {
     mouse.downAt(50, 50);
     mouse.moveTo(100, 100);
     mouse.upAt(100, 100);
-    expect(lockedRectangle).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(lockedRectangle).toEqual(expect.objectContaining({ x: 10, y: 0 }));
     expect(rectangle).toEqual(expect.objectContaining({ x: 50, y: 50 }));
     expect(API.getSelectedElements().length).toBe(1);
     expect(API.getSelectedElement().id).toBe(rectangle.id);
