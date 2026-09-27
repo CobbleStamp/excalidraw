@@ -523,6 +523,10 @@ export const normalizeFile = async (file: File) => {
     return file;
   }
 
+  // re-creating the file below would drop the FileSystemFileHandle that
+  // browser-fs-access attaches, and without it "save" can't write back
+  const fileHandle: FileSystemFileHandle | undefined = (file as any).handle;
+
   if (file?.name?.endsWith(".excalidrawlib")) {
     file = createFile(file, MIME_TYPES.excalidrawlib, file.name);
   } else if (file?.name?.endsWith(".excalidraw")) {
@@ -535,6 +539,10 @@ export const normalizeFile = async (file: File) => {
     if (mimeType && mimeType !== file.type) {
       file = createFile(file, mimeType, file.name);
     }
+  }
+
+  if (fileHandle) {
+    (file as any).handle = fileHandle;
   }
 
   (file as any)[normalizedFileSymbol] = true;
