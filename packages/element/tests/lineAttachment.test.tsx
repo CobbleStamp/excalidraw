@@ -108,6 +108,65 @@ describe("which lines can attach", () => {
   });
 });
 
+describe("files that record an attachment on the arrow only", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    reseed(7);
+    mouse.reset();
+    await render(<Excalidraw handleKeyboardGlobally />);
+  });
+
+  for (const elbowed of [false, true]) {
+    it(`makes the ${
+      elbowed ? "elbow " : ""
+    }arrow follow its shape once opened`, () => {
+      // the shape doesn't list the arrow in its boundElements
+      const box = API.createElement({
+        id: "box",
+        type: "rectangle",
+        x: 300,
+        y: 300,
+        width: 300,
+        height: 150,
+      });
+      const arrow = {
+        ...API.createElement({
+          id: "arrow",
+          type: "arrow",
+          x: 450,
+          y: 100,
+          width: 0,
+          height: 195,
+        }),
+        points: [
+          [0, 0],
+          [0, 195],
+        ],
+        elbowed,
+        startBinding: null,
+        endBinding: { elementId: "box", fixedPoint: [0.5, 0], mode: "orbit" },
+      } as unknown as ExcalidrawLinearElement;
+
+      const restored = restoreElements([box, arrow], null, {
+        repairBindings: true,
+      });
+      API.setElements(restored);
+      expect(API.getElement(box).boundElements).toEqual([
+        { type: "arrow", id: "arrow" },
+      ]);
+
+      mouse.clickAt(300, 300);
+      mouse.downAt(300, 375);
+      mouse.moveTo(300, 575);
+      mouse.up();
+
+      const moved = API.getElement(arrow);
+      const endY = moved.y + moved.points[moved.points.length - 1][1];
+      expect(Math.abs(endY - 500)).toBeLessThanOrEqual(1);
+    });
+  }
+});
+
 describe("drawing and moving attached lines", () => {
   beforeEach(async () => {
     localStorage.clear();

@@ -65,6 +65,7 @@ import { detectLineHeight } from "@excalidraw/element";
 import {
   isArrowBoundToElement,
   isArrowElement,
+  isBindableElement,
   isBindingElement,
   isElbowArrow,
   isLinearElement,
@@ -1078,6 +1079,26 @@ export const restoreElements = <T extends ExcalidrawElement>(
           !isBindingElement(element))
       ) {
         (element as Mutable<ExcalidrawLinearElement>).endBinding = null;
+      }
+
+      // excalidraw-web: a binding recorded only on the arrow or line (common
+      // in hand-written or generated files) is completed on the shape, so
+      // the endpoint follows when the shape moves
+      if (!element.isDeleted) {
+        for (const binding of [element.startBinding, element.endBinding]) {
+          const target = binding && restoredElementsMap.get(binding.elementId);
+          if (
+            target &&
+            !target.isDeleted &&
+            isBindableElement(target) &&
+            !target.boundElements?.some((bound) => bound.id === element.id)
+          ) {
+            (target as Mutable<ExcalidrawElement>).boundElements = [
+              ...(target.boundElements || []),
+              { type: "arrow", id: element.id },
+            ];
+          }
+        }
       }
     }
   }
