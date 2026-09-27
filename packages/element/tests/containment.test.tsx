@@ -519,7 +519,7 @@ describe("moving a container moves what it contains", () => {
     expect(movedInner.y).toBe(150);
   });
 
-  it("alt-dragging a container alone takes its contents along and leaves an empty copy", () => {
+  it("alt-dragging a container duplicates it with its contents", () => {
     const container = makeContainer();
     const text = makeTextInside();
     API.setElements([container, text]);
@@ -531,11 +531,19 @@ describe("moving a container moves what it contains", () => {
       mouse.up();
     });
 
-    const texts = h.elements.filter(
-      (element) => element.type === "text" && !element.isDeleted,
-    );
-    expect(texts).toHaveLength(1);
-    expect(positionOf(text)).toEqual({ x: 140, y: 40 });
+    const liveOfType = (type: string) =>
+      h.elements.filter(
+        (element) => element.type === type && !element.isDeleted,
+      );
+    const rectangleXs = liveOfType("rectangle")
+      .map((element) => element.x)
+      .sort((a, b) => a - b);
+    const textXs = liveOfType("text")
+      .map((element) => element.x)
+      .sort((a, b) => a - b);
+    // one full copy stays where it was, the other moved by 100
+    expect(rectangleXs).toEqual([0, 100]);
+    expect(textXs).toEqual([40, 140]);
   });
 
   it("keeps dragging when alt-drag duplicates the selection", () => {

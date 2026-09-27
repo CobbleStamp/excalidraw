@@ -76,6 +76,17 @@ export const getElementsContainedInDrag = (
   return contained;
 };
 
+/**
+ * Replaces the elements a drag gesture carries along inside its containers,
+ * e.g. with their copies once alt-drag has duplicated them.
+ */
+export const setElementsContainedInDrag = (
+  pointerDownState: PointerDownState,
+  contained: NonDeletedExcalidrawElement[],
+) => {
+  containedElementsByGesture.set(pointerDownState, contained);
+};
+
 export const dragSelectedElements = (
   pointerDownState: PointerDownState,
   _selectedElements: NonDeletedExcalidrawElement[],

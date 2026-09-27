@@ -13,16 +13,22 @@ import {
   deepCopyElement,
   duplicateElements,
   filterElementsEligibleAsFrameChildren,
+  getBoundTextElement,
   getCommonBounds,
+  getContainedElements,
   getSelectionStateForElements,
   isBindableElement,
   newElementWith,
   reconcileDuplicatedElements,
+  setElementsContainedInDrag,
   syncMovedIndices,
   updateBoundElements,
 } from "@excalidraw/element";
 
-import type { ExcalidrawElement } from "@excalidraw/element/types";
+import type {
+  ExcalidrawElement,
+  NonDeletedExcalidrawElement,
+} from "@excalidraw/element/types";
 
 import type { PointerDownState } from "../types";
 
@@ -188,8 +194,22 @@ export class AppDuplicate {
       selectedElements.push(hitElement);
     }
 
+    // excalidraw-web: a duplicated container is duplicated with its
+    // contents (and their bound text), so the copy is a full copy
+    const elementsMap = this.app.scene.getNonDeletedElementsMap();
+    const containedElements = getContainedElements(
+      selectedElements,
+      this.app.scene.getNonDeletedElements(),
+      elementsMap,
+    );
+    const containedBoundTexts = containedElements
+      .map((element) => getBoundTextElement(element, elementsMap))
+      .filter((text): text is NonNullable<typeof text> => !!text);
+
     const idsOfElementsToDuplicate = new Map(
-      selectedElements.map((el) => [el.id, el]),
+      [...selectedElements, ...containedElements, ...containedBoundTexts].map(
+        (el) => [el.id, el],
+      ),
     );
 
     const duplication = duplicateElements({
@@ -248,6 +268,22 @@ export class AppDuplicate {
 
     // (originals whose duplicates were vetoed are left behind)
     const duplicateElementsMap = arrayToMap(duplicatedElements);
+
+    // the drag carries the copies of the contents, not the originals left
+    // behind (which still lie inside the dragged copy at this point)
+    setElementsContainedInDrag(
+      pointerDownState,
+      containedElements
+        .map((element) =>
+          duplicateElementsMap.get(
+            origIdToDuplicateId.get(element.id) ?? element.id,
+          ),
+        )
+        .filter(
+          (element): element is NonDeletedExcalidrawElement =>
+            !!element && !element.isDeleted,
+        ),
+    );
 
     duplicatedElements.forEach((element) => {
       pointerDownState.originalElements.set(
