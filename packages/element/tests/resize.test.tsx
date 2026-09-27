@@ -681,12 +681,13 @@ describe("arrow element", () => {
       h.state,
     )[0] as ExcalidrawElbowArrowElement;
 
-    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(1.06);
+    // excalidraw-web: binding gap is 0.5 (was 6), so the start sits 0.5px right of the 95px-wide rectangle
+    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(95.5 / 95);
     expect(arrow.startBinding?.fixedPoint?.[1]).toBeCloseTo(0.75);
 
     UI.resize(rectangle, "se", [-200, -150]);
 
-    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(1.06);
+    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(95.5 / 95);
     expect(arrow.startBinding?.fixedPoint?.[1]).toBeCloseTo(0.75);
   });
 
@@ -709,11 +710,12 @@ describe("arrow element", () => {
       h.state,
     )[0] as ExcalidrawElbowArrowElement;
 
-    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(1.06);
+    // excalidraw-web: binding gap is 0.5 (was 6), so the start sits 0.5px right of the 95px-wide rectangle
+    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(95.5 / 95);
     expect(arrow.startBinding?.fixedPoint?.[1]).toBeCloseTo(0.75);
 
     UI.resize([rectangle, arrow], "nw", [300, 350]);
-    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(-0.06);
+    expect(arrow.startBinding?.fixedPoint?.[0]).toBeCloseTo(1 - 95.5 / 95);
     expect(arrow.startBinding?.fixedPoint?.[1]).toBeCloseTo(0.25);
   });
 });
@@ -1545,8 +1547,9 @@ describe("multiple selection", () => {
 
     expect(boundArrow.x).toBeCloseTo(380 * scaleX);
     expect(boundArrow.y).toBeCloseTo(240 * scaleY);
-    expect(boundArrow.points[1][0]).toBeCloseTo(63.40354208105561);
-    expect(boundArrow.points[1][1]).toBeCloseTo(-84.53805610807356);
+    // excalidraw-web: binding gap is 0.5 (was 6), so the bound end reaches closer to the rectangle
+    expect(boundArrow.points[1][0]).toBeCloseTo(67.36973169318813);
+    expect(boundArrow.points[1][1]).toBeCloseTo(-89.82630892425024);
 
     expect(arrowLabelPos.x + arrowLabel.width / 2).toBeCloseTo(
       boundArrow.x + boundArrow.points[1][0] / 2,

@@ -229,6 +229,9 @@ import {
   getTransformHandleTypeFromCoords,
   dragNewElement,
   dragSelectedElements,
+  getContainedElements,
+  getElementsContainedInDrag,
+  syncContainedFrameMembership,
   getDragOffsetXY,
   Scene,
   Store,
@@ -475,6 +478,8 @@ import { AppStateObserver, type OnStateChange } from "./AppStateObserver";
 import { findShapeByKey, TOGGLE_TOOLS } from "./Tools";
 
 import UnlockPopup from "./UnlockPopup";
+import Trans from "./Trans";
+import { openConfirmModal } from "./OverwriteConfirm/OverwriteConfirmState";
 
 import type { ExcalidrawLibraryIds } from "../data/types";
 
@@ -501,6 +506,7 @@ import type {
   LibraryItems,
   PointerDownState,
   SceneData,
+  SceneFileEvent,
   FrameNameBoundsCache,
   SidebarName,
   SidebarTabName,
@@ -4473,6 +4479,14 @@ class App extends React.Component<AppProps, AppState> {
 
     this.store.commit(elementsMap, this.state);
 
+    if (this.pendingSceneFileEvents.length > 0) {
+      const events = this.pendingSceneFileEvents;
+      this.pendingSceneFileEvents = [];
+      for (const event of events) {
+        this.props.onSceneFileEvent?.(event);
+      }
+    }
+
     // Do not notify consumers if we're still loading the scene. Among other
     // potential issues, this fixes a case where the tab isn't focused during
     // init, which would trigger onChange with empty elements, which would then
@@ -5809,6 +5823,24 @@ class App extends React.Component<AppProps, AppState> {
           includeElementsInFrames: true,
         });
 
+        // elements inside a moving container move with it, bound text included
+        const elementsMap = this.scene.getNonDeletedElementsMap();
+        const containedElements = getContainedElements(
+          selectedElements,
+          this.scene.getNonDeletedElements(),
+          elementsMap,
+        );
+        const containedBoundTexts = containedElements
+          .map((element) => getBoundTextElement(element, elementsMap))
+          .filter((text): text is NonNullable<typeof text> => !!text);
+        selectedElements = Array.from(
+          new Set([
+            ...selectedElements,
+            ...containedElements,
+            ...containedBoundTexts,
+          ]),
+        );
+
         const arrowIdsToRemove = new Set<string>();
 
         selectedElements
@@ -6089,7 +6121,9 @@ class App extends React.Component<AppProps, AppState> {
     }
     if (isArrowKey(event.key)) {
       bindOrUnbindBindingElements(
-        this.scene.getSelectedElements(this.state).filter(isArrowElement),
+        this.scene
+          .getSelectedElements(this.state)
+          .filter((element) => isBindingElement(element)),
         this.scene,
         this.state,
       );
@@ -12023,6 +12057,13 @@ class App extends React.Component<AppProps, AppState> {
         } else {
           // update the relationships between selected elements and frames
           const selectedElements = this.scene.getSelectedElements(this.state);
+          // elements carried along inside a moved container change frames
+          // together with it
+          const containedElements = getElementsContainedInDrag(
+            pointerDownState,
+            selectedElements,
+            this.scene,
+          );
           const topLayerFrame = this.getTopLayerFrameAtSceneCoords(
             sceneCoords,
             {
@@ -12107,6 +12148,12 @@ class App extends React.Component<AppProps, AppState> {
             nextElements,
             this.state,
             this,
+          );
+
+          nextElements = syncContainedFrameMembership(
+            nextElements,
+            selectedElements,
+            containedElements,
           );
 
           this.scene.replaceAllElements(nextElements);
@@ -12508,7 +12555,7 @@ class App extends React.Component<AppProps, AppState> {
         // the endpoints ("start" or "end").
         const linearElements = this.scene
           .getSelectedElements(this.state)
-          .filter(isArrowElement);
+          .filter((element) => isBindingElement(element));
 
         bindOrUnbindBindingElements(linearElements, this.scene, this.state);
       }
@@ -13177,6 +13224,43 @@ class App extends React.Component<AppProps, AppState> {
     }
   };
 
+  /**
+   * Asks before a file replaces the scene: when the host says so, or by
+   * default whenever the canvas isn't empty. Resolves to whether to go on.
+   */
+  public confirmReplacingScene = async (): Promise<boolean> => {
+    const shouldConfirm = this.props.shouldConfirmReplacingScene
+      ? this.props.shouldConfirmReplacingScene()
+      : this.scene.getNonDeletedElements().length > 0;
+    if (!shouldConfirm) {
+      return true;
+    }
+    return openConfirmModal({
+      title: t("overwriteConfirm.modal.loadFromFile.title"),
+      actionLabel: t("overwriteConfirm.modal.loadFromFile.button"),
+      color: "warning",
+      description: (
+        <Trans
+          i18nKey="overwriteConfirm.modal.loadFromFile.description"
+          bold={(text) => <strong>{text}</strong>}
+          br={() => <br />}
+        />
+      ),
+    });
+  };
+
+  private pendingSceneFileEvents: SceneFileEvent[] = [];
+
+  /**
+   * Tells the host the scene was opened from, or saved to, a file. Delivered
+   * after the next store commit, so the host hears of it only once the scene
+   * change it describes (e.g. the loaded scene) has been recorded.
+   */
+  public notifySceneFileEvent = (event: SceneFileEvent) => {
+    this.pendingSceneFileEvents.push(event);
+    this.forceUpdate();
+  };
+
   loadFileToCanvas = async (
     file: File,
     fileHandle: FileSystemFileHandle | null,
@@ -13218,6 +13302,9 @@ class App extends React.Component<AppProps, AppState> {
       }
 
       if (ret.type === MIME_TYPES.excalidraw) {
+        if (!(await this.confirmReplacingScene())) {
+          return;
+        }
         // restore the fractional indices by mutating elements
         syncInvalidIndices(elements.concat(ret.data.elements));
 
@@ -13238,6 +13325,10 @@ class App extends React.Component<AppProps, AppState> {
           },
           replaceFiles: true,
           captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+        this.notifySceneFileEvent({
+          type: "opened",
+          fileHandle: ret.data.appState?.fileHandle ?? null,
         });
       } else if (ret.type === MIME_TYPES.excalidrawlib) {
         await this.library

@@ -799,14 +799,15 @@ describe("binding hit tests", () => {
       ).toBe("child");
     });
 
-    it("binds to a smaller element straddling the container's edge when inside both", () => {
+    it("binds to the closest outline when inside both a container and a smaller element straddling its edge", () => {
       const container = rect("container", 0, 0, 200, 200);
       const badge = rect("badge", -30, 80, 60, 40);
 
-      // 3px inside the container's edge, inside the badge
+      // 3px inside the container's edge, inside the badge (12px from its outline)
+      // excalidraw-web: the smaller-overlapping-element precedence was removed; the closest outline wins
       expect(
         hitTest([container, badge], pointFrom<GlobalPoint>(3, 92)).hovered,
-      ).toBe("badge");
+      ).toBe("container");
       // 5px outside the container's edge, inside the badge: the closer
       // container outline wins
       expect(

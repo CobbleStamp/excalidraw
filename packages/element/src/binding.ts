@@ -35,7 +35,6 @@ import {
   hitElementItself,
   intersectElementWithLineSegment,
   isBindableElementInsideOtherBindable,
-  isPointInElement,
 } from "./collision";
 import { distanceToElement } from "./distance";
 import {
@@ -48,7 +47,7 @@ import { LinearElementEditor } from "./linearElementEditor";
 import { mutateElement } from "./mutateElement";
 import { getBoundTextElement, handleBindTextResize } from "./textElement";
 import {
-  isArrowElement,
+  isBindingElement,
   isBindableElement,
   isBoundToContainer,
   isElbowArrow,
@@ -110,11 +109,13 @@ export type BindingStrategy =
     };
 
 /**
- * gaps exclude element strokeWidth
+ * Distance between an attached endpoint and the shape's outline. Kept just
+ * above zero so the endpoint sits on the boundary, touching the shape's
+ * stroke, rather than stopping short of it.
  *
  * IMPORTANT: currently must be > 0 (this also applies to the computed gap)
  */
-export const BASE_BINDING_GAP = 5;
+export const BASE_BINDING_GAP = 0.5;
 export const BASE_ARROW_MIN_LENGTH = 10;
 export const FOCUS_POINT_SIZE = 10 / 1.5;
 
@@ -125,21 +126,33 @@ const MIN_BINDABLE_SIZE = 1;
 export const getBindingGap = (
   // only the stroke width is needed, so the gap can also be computed for a
   // bind target that doesn't exist yet (see `getTextBindingForArrowEndpoint`)
-  bindTarget: Pick<ExcalidrawBindableElement, "strokeWidth">,
+  _bindTarget: Pick<ExcalidrawBindableElement, "strokeWidth">,
 ): number => {
-  return BASE_BINDING_GAP + bindTarget.strokeWidth / 2;
+  return BASE_BINDING_GAP;
 };
 
+/** Snap distance, in screen pixels, when the build doesn't set one. */
+export const DEFAULT_SNAP_DISTANCE_SCREEN_PX = 16;
+
+/**
+ * How close, in screen pixels, an endpoint must come to a shape to snap onto
+ * it: the build setting `VITE_APP_SNAP_DISTANCE_PX`, or 16 when unset or
+ * invalid.
+ */
+export const getSnapDistanceScreenPx = (): number => {
+  const configured = Number(import.meta.env.VITE_APP_SNAP_DISTANCE_PX);
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : DEFAULT_SNAP_DISTANCE_SCREEN_PX;
+};
+
+/**
+ * The snap distance in scene units: a constant distance on screen at every
+ * zoom level.
+ */
 export const maxBindingDistance_simple = (zoom?: AppState["zoom"]): number => {
-  const BASE_BINDING_DISTANCE = Math.max(BASE_BINDING_GAP, 15);
-  const zoomValue = zoom?.value && zoom.value < 1 ? zoom.value : 1;
-  return clamp(
-    // reducing zoom impact so that the diff between binding distance and
-    // binding gap is kept to minimum when possible
-    BASE_BINDING_DISTANCE / (zoomValue * 1.5),
-    BASE_BINDING_DISTANCE,
-    BASE_BINDING_DISTANCE * 2,
-  );
+  const zoomValue = zoom?.value && zoom.value > 0 ? zoom.value : 1;
+  return getSnapDistanceScreenPx() / zoomValue;
 };
 
 export const isBindingEnabled = (appState: {
@@ -738,15 +751,6 @@ const getBindingStrategyForDraggingBindingElementEndpoints_simple = (
     elementsMap,
     appState.zoom,
   );
-  const pointInElement =
-    hit &&
-    (opts?.angleLocked
-      ? isPointInElement(
-          pointFrom<GlobalPoint>(scenePointerX, scenePointerY),
-          hit,
-          elementsMap,
-        )
-      : isPointInElement(globalPoint, hit, elementsMap));
   const otherBindableElement = otherBinding
     ? (elementsMap.get(
         otherBinding.elementId,
@@ -851,45 +855,40 @@ const getBindingStrategyForDraggingBindingElementEndpoints_simple = (
     };
   }
 
-  // Handle normal cases
+  // Handle normal cases. An endpoint over a shape snaps onto its boundary just
+  // like one near it (only Alt binds to a point inside).
   const current: BindingStrategy = hit
-    ? pointInElement
-      ? {
-          mode: "inside",
-          element: hit,
-          focusPoint: globalPoint,
-        }
-      : {
-          mode: "orbit",
-          element: hit,
-          focusPoint:
-            projectFixedPointOntoDiagonal(
-              arrow,
-              opts?.angleLocked
-                ? globalPoint
-                : appState.gridModeEnabled
-                ? snapBoundPointToGrid(
-                    pointFrom<GlobalPoint>(scenePointerX, scenePointerY),
-                    hit,
-                    elementsMap,
-                    appState.gridSize as NullableGridSize,
+    ? {
+        mode: "orbit",
+        element: hit,
+        focusPoint:
+          projectFixedPointOntoDiagonal(
+            arrow,
+            opts?.angleLocked
+              ? globalPoint
+              : appState.gridModeEnabled
+              ? snapBoundPointToGrid(
+                  pointFrom<GlobalPoint>(scenePointerX, scenePointerY),
+                  hit,
+                  elementsMap,
+                  appState.gridSize as NullableGridSize,
+                  arrow,
+                  LinearElementEditor.getPointAtIndexGlobalCoordinates(
                     arrow,
-                    LinearElementEditor.getPointAtIndexGlobalCoordinates(
-                      arrow,
-                      startDragged ? 1 : -2,
-                      elementsMap,
-                    ),
-                  )
-                : globalPoint,
-              hit,
-              startDragged ? "start" : "end",
-              elementsMap,
-              appState.zoom,
-              appState.isMidpointSnappingEnabled &&
-                !opts?.angleLocked &&
-                !appState.gridModeEnabled,
-            ) || globalPoint,
-        }
+                    startDragged ? 1 : -2,
+                    elementsMap,
+                  ),
+                )
+              : globalPoint,
+            hit,
+            startDragged ? "start" : "end",
+            elementsMap,
+            appState.zoom,
+            appState.isMidpointSnappingEnabled &&
+              !opts?.angleLocked &&
+              !appState.gridModeEnabled,
+          ) || globalPoint,
+      }
     : { mode: null };
 
   const otherEndpoint = LinearElementEditor.getPointAtIndexGlobalCoordinates(
@@ -1226,7 +1225,7 @@ export const reanchorBindingsToOutline = (
   const reach = Math.max(changedElement.width, changedElement.height) * 2;
 
   boundElementsVisitor(elementsMap, changedElement, (element) => {
-    if (!isArrowElement(element) || !isNonDeletedElement(element)) {
+    if (!isBindingElement(element) || !isNonDeletedElement(element)) {
       return;
     }
 
@@ -1351,7 +1350,7 @@ export const updateBoundElements = (
       );
     }
 
-    if (!isArrowElement(element) || !isNonDeletedElement(element)) {
+    if (!isBindingElement(element) || !isNonDeletedElement(element)) {
       return;
     }
 
@@ -1501,7 +1500,7 @@ export const updateBindings = (
     newSize?: { width: number; height: number };
   },
 ) => {
-  if (isArrowElement(latestElement)) {
+  if (isBindingElement(latestElement)) {
     const elementsMap = scene.getNonDeletedElementsMap();
 
     if (latestElement.startBinding) {
@@ -2402,7 +2401,7 @@ const bindableElementsVisitor = <T>(
     result.push(visit(elements.get(id), "containerId", id));
   }
 
-  if (isArrowElement(element)) {
+  if (isBindingElement(element)) {
     if (element.startBinding) {
       const id = element.startBinding.elementId;
       result.push(visit(elements.get(id), "startBinding", id));
@@ -2502,7 +2501,7 @@ export class BoundElement {
           return;
         }
 
-        if (isArrowElement(boundElement)) {
+        if (isBindingElement(boundElement)) {
           // rebind if not found!
           updateElementWith(bindableElement, {
             boundElements: newBoundElements(

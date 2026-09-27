@@ -443,38 +443,13 @@ export const getHoveredElementForBinding = (
     return candidates[0].element;
   }
 
+  // The shape whose outline is closest wins. Candidates are listed front to
+  // back and the sort is stable, so an exact tie goes to the one on top.
   const closestElements = candidates.sort(
     (a, b) => Math.abs(a.distance) - Math.abs(b.distance),
   );
 
-  const candidate = closestElements[0];
-  const [cx1, cy1, cx2, cy2] = getElementBounds(candidate.element, elementsMap);
-  const candidateArea = Math.max(
-    0.00001,
-    Math.abs(cx2 - cx1) * Math.abs(cy2 - cy1),
-  );
-  // A smaller element overlapping the closest one takes precedence, but only
-  // when the point is inside it: otherwise the closest outline wins, e.g. an
-  // arrow ending just inside a container's edge next to a nested element
-  const overlaps = closestElements
-    .filter((c) => c.element !== candidate.element && c.distance >= 0)
-    .map((c) => {
-      const [x1, y1, x2, y2] = getElementBounds(c.element, elementsMap);
-      const overlapWidth = Math.max(0, Math.min(x2, cx2) - Math.max(x1, cx1));
-      const overlapHeight = Math.max(0, Math.min(y2, cy2) - Math.max(y1, cy1));
-      const area = Math.max(0.00001, Math.abs(x2 - x1) * Math.abs(y2 - y1));
-
-      return {
-        ...c,
-        overlapPercent: (overlapHeight * overlapWidth) / area,
-        relativeArea: area / candidateArea,
-      };
-    })
-    .filter((c) => c.overlapPercent > 0.25 && c.relativeArea < 0.75);
-
-  return candidate.distance >= 0 && overlaps.length > 0
-    ? overlaps[0].element
-    : candidate.element;
+  return closestElements[0].element;
 };
 
 /**

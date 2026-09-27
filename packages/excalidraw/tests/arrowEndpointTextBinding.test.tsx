@@ -484,8 +484,9 @@ describe("binding text to an arrow endpoint", () => {
       expect(text.autoResize).toBe(false);
       expect(text.textAlign).toBe("left");
       // left edge is the anchor and must be untouched by the drag
-      expect(text.x).toBeCloseTo(306, 0);
-      expect(text.width).toBeCloseTo(214, 0);
+      // excalidraw-web: binding gap is 0.5 (was 5 + strokeWidth/2 = 6)
+      expect(text.x).toBeCloseTo(300.5, 0);
+      expect(text.width).toBeCloseTo(219.5, 0);
     });
 
     it("grows leftwards for a right-bound text, pinning its right edge", async () => {
@@ -497,7 +498,8 @@ describe("binding text to an arrow endpoint", () => {
       expect(text.autoResize).toBe(false);
       expect(text.textAlign).toBe("right");
       // the right edge is the anchor
-      expect(text.x + text.width).toBeCloseTo(294, 0);
+      // excalidraw-web: binding gap is 0.5 (was 5 + strokeWidth/2 = 6)
+      expect(text.x + text.width).toBeCloseTo(299.5, 0);
     });
 
     it("keeps a centred text centred on the anchor", async () => {
@@ -520,7 +522,8 @@ describe("binding text to an arrow endpoint", () => {
       const text = getText();
       // treated as no drag at all — the text keeps autogrowing
       expect(text.autoResize).toBe(true);
-      expect(text.x).toBeCloseTo(306, 0);
+      // excalidraw-web: binding gap is 0.5 (was 5 + strokeWidth/2 = 6)
+      expect(text.x).toBeCloseTo(300.5, 0);
     });
 
     // the autoResize handle unwraps the text back to one line; anchoring that

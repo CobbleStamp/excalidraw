@@ -8,9 +8,11 @@ import { arrayToMap, invariant } from "@excalidraw/common";
 import {
   toggleLinePolygonState,
   CaptureUpdateAction,
+  unbindBindingElement,
 } from "@excalidraw/element";
 
 import type {
+  ExcalidrawArrowElement,
   ExcalidrawLinearElement,
   ExcalidrawLineElement,
 } from "@excalidraw/element/types";
@@ -150,8 +152,25 @@ export const actionTogglePolygon = register({
 
     const targetElementsMap = arrayToMap(targetElements);
 
+    // excalidraw-web: a closed polygon has no free ends, so it lets go of
+    // the shapes its ends were attached to
+    if (nextPolygonState) {
+      for (const line of targetElements) {
+        unbindBindingElement(
+          line as unknown as ExcalidrawArrowElement,
+          "start",
+          app.scene,
+        );
+        unbindBindingElement(
+          line as unknown as ExcalidrawArrowElement,
+          "end",
+          app.scene,
+        );
+      }
+    }
+
     return {
-      elements: elements.map((element) => {
+      elements: app.scene.getElementsIncludingDeleted().map((element) => {
         if (!targetElementsMap.has(element.id) || !isLineElement(element)) {
           return element;
         }

@@ -2407,8 +2407,8 @@ const pointDraggingUpdates = (
     }),
   );
 
-  // Linear elements have no special logic
-  if (!isArrowElement(element)) {
+  // Linear elements that can't attach (closed polygons) have no special logic
+  if (!isBindingElement(element)) {
     return {
       positions: naiveDraggingPoints,
     };

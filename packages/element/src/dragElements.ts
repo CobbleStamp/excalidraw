@@ -17,11 +17,12 @@ import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 import { unbindBindingElement, updateBoundElements } from "./binding";
 import { getCommonBounds } from "./bounds";
+import { getContainedElements } from "./containment";
 import { getPerfectElementSize } from "./sizeHelpers";
 import { getBoundTextElement } from "./textElement";
 import { getMinTextElementWidth } from "./textMeasurements";
 import {
-  isArrowElement,
+  isBindingElement,
   isElbowArrow,
   isFrameLikeElement,
   isImageElement,
@@ -31,6 +32,49 @@ import {
 import type { Scene } from "./Scene";
 
 import type { ExcalidrawElement, ExcalidrawTextElement } from "./types";
+
+const containedElementsByGesture = new WeakMap<
+  PointerDownState,
+  NonDeletedExcalidrawElement[]
+>();
+
+/**
+ * The elements that move along with `movingElements` during one drag gesture
+ * because they lie inside a moving container. Judged once, at the positions
+ * recorded at pointer-down, from elements that existed then (so copies made
+ * by alt-drag are never swept in).
+ */
+export const getElementsContainedInDrag = (
+  pointerDownState: PointerDownState,
+  movingElements: readonly NonDeletedExcalidrawElement[],
+  scene: Scene,
+): NonDeletedExcalidrawElement[] => {
+  const cached = containedElementsByGesture.get(pointerDownState);
+  if (cached) {
+    return cached;
+  }
+  const originals = pointerDownState.originalElements;
+  const movingOriginals = movingElements
+    .map((element) => originals.get(element.id))
+    .filter((element): element is NonDeletedExcalidrawElement => !!element);
+  const candidates = Array.from(originals.values()).filter(
+    (element) => !element.isDeleted,
+  );
+  const sceneElements = scene.getNonDeletedElementsMap();
+  const contained: NonDeletedExcalidrawElement[] = [];
+  for (const element of getContainedElements(
+    movingOriginals,
+    candidates,
+    originals,
+  )) {
+    const sceneElement = sceneElements.get(element.id);
+    if (sceneElement) {
+      contained.push(sceneElement);
+    }
+  }
+  containedElementsByGesture.set(pointerDownState, contained);
+  return contained;
+};
 
 export const dragSelectedElements = (
   pointerDownState: PointerDownState,
@@ -84,6 +128,14 @@ export const dragSelectedElements = (
     }
   }
 
+  for (const element of getElementsContainedInDrag(
+    pointerDownState,
+    Array.from(elementsToUpdate),
+    scene,
+  )) {
+    elementsToUpdate.add(element);
+  }
+
   const origElements: ExcalidrawElement[] = [];
 
   for (const element of elementsToUpdate) {
@@ -108,7 +160,7 @@ export const dragSelectedElements = (
   );
 
   elementsToUpdate.forEach((element) => {
-    if (!isArrowElement(element)) {
+    if (!isBindingElement(element)) {
       updateElementCoords(pointerDownState, element, scene, adjustedOffset);
 
       // skip arrow labels since we calculate its position during render

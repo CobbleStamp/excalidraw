@@ -2853,6 +2853,18 @@ exports[`regression tests > can drag element that covers another element, while 
       "added": {},
       "removed": {},
       "updated": {
+        "id0": {
+          "deleted": {
+            "version": 4,
+            "x": 300,
+            "y": 300,
+          },
+          "inserted": {
+            "version": 3,
+            "x": 100,
+            "y": 100,
+          },
+        },
         "id3": {
           "deleted": {
             "version": 4,
@@ -8402,6 +8414,18 @@ exports[`regression tests > given selected element A with lower z-index than uns
             "version": 2,
             "x": 0,
             "y": 0,
+          },
+        },
+        "id1": {
+          "deleted": {
+            "version": 3,
+            "x": 600,
+            "y": 600,
+          },
+          "inserted": {
+            "version": 2,
+            "x": 500,
+            "y": 500,
           },
         },
       },

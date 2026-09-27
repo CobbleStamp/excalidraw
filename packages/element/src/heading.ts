@@ -84,7 +84,10 @@ const headingForPointFromDiamondElement = (
     );
   }
 
-  const SHRINK = 0.95; // Rounded elements tolerance
+  // excalidraw-web: 0.9 (was 0.95). The binding gap shrank from ~6 to 0.5, so
+  // the tolerance must alone cover the rounded vertex inset (~6% of the half
+  // diagonal), or a point just above a rounded vertex reads as a side.
+  const SHRINK = 0.9; // Rounded elements tolerance
   const top = pointFromVector(
     vectorScale(
       vectorFromPoint(

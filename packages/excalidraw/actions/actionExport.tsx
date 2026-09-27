@@ -287,6 +287,11 @@ export const actionSaveToActiveFile = register({
             fileHandle: previousFileHandle,
           });
 
+      app.notifySceneFileEvent({
+        type: "saved",
+        fileHandle: fileHandle ?? null,
+      });
+
       return {
         captureUpdate: CaptureUpdateAction.NEVER,
         appState: {
@@ -347,6 +352,11 @@ export const actionSaveFileToDisk = register({
         fileHandle: null,
       });
 
+      app.notifySceneFileEvent({
+        type: "saved",
+        fileHandle: savedFileHandle ?? null,
+      });
+
       return {
         captureUpdate: CaptureUpdateAction.NEVER,
         appState: {
@@ -400,18 +410,28 @@ export const actionLoadScene = register({
     );
   },
   perform: async (elements, appState, _, app) => {
+    if (!(await app.confirmReplacingScene())) {
+      return false;
+    }
     try {
       const {
         elements: loadedElements,
         appState: loadedAppState,
         files,
       } = await loadFromJSON(appState, elements);
-      return {
+      // excalidraw-web: apply the loaded scene here, then tell the host, so
+      // the host sees the event only once the new scene is in place
+      app.syncActionResult({
         elements: loadedElements,
         appState: loadedAppState,
         files,
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-      };
+      });
+      app.notifySceneFileEvent({
+        type: "opened",
+        fileHandle: loadedAppState.fileHandle ?? null,
+      });
+      return false;
     } catch (error: any) {
       if (error?.name === "AbortError") {
         console.warn(error);

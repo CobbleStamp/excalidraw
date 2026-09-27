@@ -1076,7 +1076,23 @@ export interface ExcalidrawProps {
       signal: AbortSignal;
     },
   ) => MaybePromise<void> | AsyncGenerator<OnExportProgress, void>;
+  /**
+   * Called after the scene was opened from a file (menu, shortcut or drop) or
+   * saved to one, including a download. `fileHandle` is the file the scene is
+   * now linked to, if the browser supports that.
+   */
+  onSceneFileEvent?: (event: SceneFileEvent) => void;
+  /**
+   * Whether to ask before a file replaces the current scene. Without it, the
+   * editor asks whenever the canvas isn't empty.
+   */
+  shouldConfirmReplacingScene?: () => boolean;
 }
+
+export type SceneFileEvent = {
+  type: "opened" | "saved";
+  fileHandle: FileSystemFileHandle | null;
+};
 
 export type SceneData = {
   /** Expects normalized elements; restore imported data before updating the scene. */
@@ -1186,6 +1202,8 @@ export type AppClassProperties = {
   editorInterface: App["editorInterface"];
   scene: App["scene"];
   syncActionResult: App["syncActionResult"];
+  confirmReplacingScene: App["confirmReplacingScene"];
+  notifySceneFileEvent: App["notifySceneFileEvent"];
   fonts: App["fonts"];
   pasteFromClipboard: App["pasteFromClipboard"];
   id: App["id"];

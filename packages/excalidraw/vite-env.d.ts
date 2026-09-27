@@ -10,6 +10,9 @@ interface ImportMetaEnv {
   VITE_APP_BACKEND_V2_POST_URL: string;
 
   VITE_APP_LIBRARY_URL: string;
+
+  // screen pixels within which an arrow or line endpoint snaps onto a shape
+  VITE_APP_SNAP_DISTANCE_PX: string;
   VITE_APP_LIBRARY_BACKEND: string;
 
   // collaboration WebSocket server (https: string

@@ -171,14 +171,17 @@ export const isBindingElement = <T extends ExcalidrawElement>(
   return (
     element != null &&
     (!element.locked || includeLocked === true) &&
-    isBindingElementType(element.type)
+    isBindingElementType(element.type) &&
+    // a closed polygon drawn with the line tool has no free ends to attach
+    !(element.type === "line" && (element as { polygon?: boolean }).polygon)
   );
 };
 
+/** Arrows and plain lines attach their endpoints to shapes. */
 export const isBindingElementType = (
   elementType: ElementOrToolType,
 ): boolean => {
-  return elementType === "arrow";
+  return elementType === "arrow" || elementType === "line";
 };
 
 export const isBindableElement = <T extends ExcalidrawElement>(

@@ -716,6 +716,15 @@ describe("regression tests", () => {
     mouse.up(200, 200);
 
     expect(API.getSelectedElement().type).toBe("rectangle");
+    // excalidraw-web: the covered rectangle lies inside the dragged one (same outline), so containment moves it along
+    expect(
+      h.elements
+        .filter((el) => el.type === "rectangle")
+        .map((el) => [el.x, el.y]),
+    ).toEqual([
+      [300, 300],
+      [300, 300],
+    ]);
   });
 
   it("deselects selected element on pointer down when pointer doesn't hit any element", () => {
@@ -821,6 +830,9 @@ describe("regression tests", () => {
       expect(API.getSelectedElement().id).toBe(rect1.id);
       expect(API.getSelectedElement().x).toEqual(prevX + 100);
       expect(API.getSelectedElement().y).toEqual(prevY + 100);
+      // excalidraw-web: rect2 lies fully inside rect1, so containment moves it along
+      const movedRect2 = h.elements.find((el) => el.id === rect2.id)!;
+      expect([movedRect2.x, movedRect2.y]).toEqual([600, 600]);
     },
   );
 

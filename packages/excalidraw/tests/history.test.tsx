@@ -555,6 +555,8 @@ describe("history", () => {
     it("should create new history entry on scene import via drag&drop", async () => {
       await render(
         <Excalidraw
+          // excalidraw-web: dropping a scene file now asks before replacing a non-empty canvas; skip the prompt here
+          shouldConfirmReplacingScene={() => false}
           initialData={{
             elements: [API.createElement({ type: "rectangle", id: "A" })],
             appState: {

@@ -308,13 +308,12 @@ describe("elbow arrow ui", () => {
     ) as HTMLInputElement;
     UI.updateInput(inputAngle, String("40"));
 
+    // excalidraw-web: binding gap is 0.5 (was 6); the ends sit on the outlines and the route loses its jog
     expect(arrow.points.map((point) => point.map(Math.round))).toEqual([
       [0, 0],
-      [36, 0],
-      [36, 90],
-      [28, 90],
-      [28, 164],
-      [101, 164],
+      [39, 0],
+      [39, 168],
+      [111, 168],
     ]);
   });
 

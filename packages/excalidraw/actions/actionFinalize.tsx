@@ -1,6 +1,9 @@
 import { pointFrom } from "@excalidraw/math";
 
-import { bindOrUnbindBindingElement } from "@excalidraw/element/binding";
+import {
+  bindOrUnbindBindingElement,
+  unbindBindingElement,
+} from "@excalidraw/element/binding";
 import {
   isValidPolygon,
   LinearElementEditor,
@@ -29,6 +32,7 @@ import { CaptureUpdateAction } from "@excalidraw/element";
 
 import type { LocalPoint } from "@excalidraw/math";
 import type {
+  ExcalidrawArrowElement,
   ExcalidrawElement,
   ExcalidrawLinearElement,
   NonDeleted,
@@ -322,6 +326,17 @@ export const actionFinalize = register<FormData>({
               : p,
           );
           if (isLineElement(element)) {
+            // excalidraw-web: closing the loop lets go of attached shapes
+            unbindBindingElement(
+              element as unknown as ExcalidrawArrowElement,
+              "start",
+              scene,
+            );
+            unbindBindingElement(
+              element as unknown as ExcalidrawArrowElement,
+              "end",
+              scene,
+            );
             scene.mutateElement(element, {
               points,
               polygon: true,

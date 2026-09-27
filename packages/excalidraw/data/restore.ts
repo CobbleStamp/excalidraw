@@ -65,6 +65,7 @@ import { detectLineHeight } from "@excalidraw/element";
 import {
   isArrowBoundToElement,
   isArrowElement,
+  isBindingElement,
   isElbowArrow,
   isLinearElement,
   isLineElement,
@@ -633,10 +634,28 @@ export const restoreElement = (
           } as ExcalidrawLinearElement));
       }
 
+      // plain lines attach to shapes like arrows do; closed polygons don't
+      const canAttach = isLineElement(element) && !element.polygon;
       const restoredLine = restoreElementWithProperties(element, {
         type: "line",
-        startBinding: null,
-        endBinding: null,
+        startBinding: canAttach
+          ? repairBinding(
+              element as unknown as ExcalidrawArrowElement,
+              element.startBinding,
+              targetElementsMap,
+              existingElementsMap,
+              "start",
+            )
+          : null,
+        endBinding: canAttach
+          ? repairBinding(
+              element as unknown as ExcalidrawArrowElement,
+              element.endBinding,
+              targetElementsMap,
+              existingElementsMap,
+              "end",
+            )
+          : null,
         startArrowhead,
         endArrowhead,
         points,
@@ -1049,14 +1068,14 @@ export const restoreElements = <T extends ExcalidrawElement>(
       if (
         element.startBinding &&
         (!restoredElementsMap.has(element.startBinding.elementId) ||
-          !isArrowElement(element))
+          !isBindingElement(element))
       ) {
         (element as Mutable<ExcalidrawLinearElement>).startBinding = null;
       }
       if (
         element.endBinding &&
         (!restoredElementsMap.has(element.endBinding.elementId) ||
-          !isArrowElement(element))
+          !isBindingElement(element))
       ) {
         (element as Mutable<ExcalidrawLinearElement>).endBinding = null;
       }

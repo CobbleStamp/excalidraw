@@ -67,6 +67,8 @@ export const ExcalidrawAPIProvider = ({
 const ExcalidrawBase = (props: ExcalidrawProps) => {
   const {
     onExport,
+    onSceneFileEvent,
+    shouldConfirmReplacingScene,
     className,
     ownerDocument = document,
     onChange,
@@ -209,6 +211,8 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
       <InitializeApp langCode={langCode} theme={theme}>
         <App
           onExport={onExport}
+          onSceneFileEvent={onSceneFileEvent}
+          shouldConfirmReplacingScene={shouldConfirmReplacingScene}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

@@ -64,6 +64,7 @@ export * from "./bucketFill";
 export * from "./collision";
 export * from "./comparisons";
 export * from "./containerCache";
+export * from "./containment";
 export * from "./cropElement";
 export * from "./delta";
 export * from "./distance";

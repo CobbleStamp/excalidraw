@@ -71,12 +71,13 @@ describe("flipping re-centers selection", () => {
     API.executeAction(actionFlipHorizontal);
 
     const rec1 = h.elements.find((el) => el.id === "rec1")!;
+    // excalidraw-web: with the 0.5 binding gap and screen-px snap distance the 1px drift is gone; the shapes stay exactly in place
     expect(rec1.x).toBeCloseTo(100, 0);
-    expect(rec1.y).toBeCloseTo(101, 0);
+    expect(rec1.y).toBeCloseTo(100, 0);
 
     const rec2 = h.elements.find((el) => el.id === "rec2")!;
     expect(rec2.x).toBeCloseTo(220, 0);
-    expect(rec2.y).toBeCloseTo(251, 0);
+    expect(rec2.y).toBeCloseTo(250, 0);
   });
 });
 
