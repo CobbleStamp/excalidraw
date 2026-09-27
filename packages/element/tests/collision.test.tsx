@@ -691,12 +691,14 @@ describe("binding hit tests", () => {
   });
 
   it("both skip elements hidden behind an opaque element", () => {
+    // excalidraw-web: the point sits 10px inside the cover's right edge and 5px
+    // inside the hidden element's, so both are within the snap distance
     const hidden = API.createElement({
       id: "hidden",
       type: "rectangle",
-      x: 30,
+      x: 80,
       y: 30,
-      width: 40,
+      width: 15,
       height: 40,
       index: "a0" as SceneElement["index"],
     }) as SceneElement;
@@ -711,7 +713,7 @@ describe("binding hit tests", () => {
         backgroundColor,
         index: "a1" as SceneElement["index"],
       }) as SceneElement;
-    const point = pointFrom<GlobalPoint>(50, 50);
+    const point = pointFrom<GlobalPoint>(90, 50);
 
     expect(hitTest([hidden, cover("#ffc9c9")], point)).toEqual({
       hovered: "cover",
@@ -721,19 +723,42 @@ describe("binding hit tests", () => {
     const transparent = hitTest([hidden, cover("transparent")], point);
     expect(transparent.hovered).toBe("hidden");
     expect(transparent.all).toEqual(["cover", "hidden"]);
+
+    // excalidraw-web: deep inside an opaque cover nothing binds, not even an
+    // element behind it whose outline is within the snap distance
+    const deepHidden = API.createElement({
+      id: "deepHidden",
+      type: "rectangle",
+      x: 40,
+      y: 40,
+      width: 20,
+      height: 20,
+      index: "a0" as SceneElement["index"],
+    }) as SceneElement;
+    const deepPoint = pointFrom<GlobalPoint>(50, 50);
+    expect(hitTest([deepHidden, cover("#ffc9c9")], deepPoint)).toEqual({
+      hovered: undefined,
+      all: [],
+    });
+    expect(hitTest([deepHidden, cover("transparent")], deepPoint)).toEqual({
+      hovered: "deepHidden",
+      all: ["deepHidden"],
+    });
   });
 
   it("an image, and a locked opaque element, hide what's behind them", () => {
+    // excalidraw-web: the point sits 10px inside the cover's right edge and 5px
+    // inside the hidden element's, so both are within the snap distance
     const hidden = API.createElement({
       id: "hidden",
       type: "rectangle",
-      x: 30,
+      x: 80,
       y: 30,
-      width: 40,
+      width: 15,
       height: 40,
       index: "a0" as SceneElement["index"],
     }) as SceneElement;
-    const point = pointFrom<GlobalPoint>(50, 50);
+    const point = pointFrom<GlobalPoint>(90, 50);
 
     const image = API.createElement({
       id: "image",
@@ -839,11 +864,47 @@ describe("binding hit tests", () => {
       }) as SceneElement;
     const center = pointFrom<GlobalPoint>(100, 100);
 
-    expect(hitTest([circle("transparent")], center).hovered).toBe("circle");
+    // excalidraw-web: the center of a 200px circle is 100px from its outline,
+    // beyond the snap distance: nothing binds, and the opaque circle still
+    // hides the element behind it whose outline is within the snap distance
+    expect(hitTest([circle("transparent")], center).hovered).toBe(undefined);
     expect(hitTest([hidden, circle("#ffc9c9")], center)).toEqual({
-      hovered: "circle",
-      all: ["circle"],
+      hovered: undefined,
+      all: [],
     });
+
+    // excalidraw-web: a 24px circle's center is within the snap distance
+    const smallHidden = API.createElement({
+      id: "smallHidden",
+      type: "rectangle",
+      x: 6,
+      y: 6,
+      width: 12,
+      height: 12,
+      index: "a0" as SceneElement["index"],
+    }) as SceneElement;
+    const smallCircle = (backgroundColor: string) =>
+      API.createElement({
+        id: "circle",
+        type: "ellipse",
+        x: 0,
+        y: 0,
+        width: 24,
+        height: 24,
+        backgroundColor,
+        index: "a1" as SceneElement["index"],
+      }) as SceneElement;
+    const smallCenter = pointFrom<GlobalPoint>(12, 12);
+
+    expect(hitTest([smallCircle("transparent")], smallCenter).hovered).toBe(
+      "circle",
+    );
+    expect(hitTest([smallHidden, smallCircle("#ffc9c9")], smallCenter)).toEqual(
+      {
+        hovered: "circle",
+        all: ["circle"],
+      },
+    );
   });
 });
 

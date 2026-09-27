@@ -230,8 +230,9 @@ describe("autoshape tool", () => {
     });
     API.setElements([start, end]);
 
-    // starts and ends deep inside the shapes
-    sketch(seg([150, 150], [450, 450], 30));
+    // excalidraw-web: starts and ends 10px inside the shapes, within the snap
+    // distance (deeper inside, an endpoint stays free)
+    sketch(seg([190, 190], [410, 410], 30));
 
     const arrow = h.elements.find((element) => element.type === "arrow");
     assert(isArrowElement(arrow));
@@ -248,16 +249,18 @@ describe("autoshape tool", () => {
   });
 
   it("keeps inside-bindings for an arrow sketched within a single shape", () => {
+    // excalidraw-web: a shape 24px tall, so every point of the sketch is
+    // within the snap distance of its outline (deeper inside stays free)
     const container = API.createElement({
       type: "rectangle",
       x: 50,
-      y: 50,
+      y: 288,
       width: 500,
-      height: 500,
+      height: 24,
     });
     API.setElements([container]);
 
-    sketch(arrowPath(150, 300, 400, 300));
+    sketch(arrowPath(150, 300, 220, 300));
 
     const arrow = h.elements.find((element) => element.type === "arrow");
     assert(isArrowElement(arrow));
@@ -297,7 +300,8 @@ describe("autoshape tool", () => {
     });
     API.setElements([only]);
 
-    sketch(seg([150, 150], [395, 395], 30));
+    // excalidraw-web: starts 10px inside the shape, within the snap distance
+    sketch(seg([190, 190], [395, 395], 30));
 
     const arrow = h.elements.find((element) => element.type === "arrow");
     assert(isArrowElement(arrow));
@@ -320,7 +324,8 @@ describe("autoshape tool", () => {
     });
     API.setElements([only]);
 
-    sketch(seg([100, 100], [450, 450], 30));
+    // excalidraw-web: ends 10px inside the shape, within the snap distance
+    sketch(seg([100, 100], [410, 410], 30));
 
     const arrow = h.elements.find((element) => element.type === "arrow");
     assert(isArrowElement(arrow));

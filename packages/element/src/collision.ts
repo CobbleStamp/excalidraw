@@ -399,14 +399,14 @@ const getBindingCandidates = (
       maxDistance,
     );
 
-    if (distance > -maxDistance) {
-      if (!element.locked) {
-        candidates.push({ element, distance });
-      }
-
-      if (distance >= 0 && isOpaqueForBinding(element)) {
-        break;
-      }
+    // excalidraw-web: only a point within the snap distance of the outline,
+    // on either side, can bind; deeper inside a shape it stays free. A filled
+    // shape still hides what is behind it, however deep the point is.
+    if (Math.abs(distance) <= maxDistance && !element.locked) {
+      candidates.push({ element, distance });
+    }
+    if (distance >= 0 && isOpaqueForBinding(element)) {
+      break;
     }
   }
 

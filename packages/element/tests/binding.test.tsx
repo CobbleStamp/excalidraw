@@ -64,9 +64,10 @@ describe("binding for simple arrows", () => {
       const rect = API.getSelectedElement();
 
       // Draw arrow with endpoint inside the filled rectangle
+      // excalidraw-web: both ends within the snap distance of the outline
       UI.clickTool("arrow");
       mouse.downAt(110, 110);
-      mouse.moveTo(160, 160);
+      mouse.moveTo(190, 160);
       mouse.up();
 
       const arrow = API.getSelectedElement() as ExcalidrawLinearElement;
@@ -190,7 +191,11 @@ describe("binding for simple arrows", () => {
 
   describe("self-binding (both ends to the same element) single-click finalize", () => {
     // rect spans x:200..400, y:200..400; orbit ring is ~15px outside the outline
-    const INSIDE: [number, number] = [250, 250];
+    // excalidraw-web: 10px inside the left edge, within the snap distance
+    const INSIDE: [number, number] = [210, 250];
+    const INSIDE_LOWER: [number, number] = [210, 350];
+    // excalidraw-web: beyond the snap distance from the outline, stays free
+    const DEEP_INSIDE: [number, number] = [300, 300];
     const ORBIT_LEFT: [number, number] = [187, 300];
     const ORBIT_RIGHT: [number, number] = [413, 300];
     const MIDDLE: [number, number] = [550, 100];
@@ -238,7 +243,8 @@ describe("binding for simple arrows", () => {
     });
 
     it("inside -> inside keep in multi-point mode (no single-click finalize)", () => {
-      drawSelfArrow(INSIDE, [INSIDE[0] + 50, INSIDE[1] + 50]); // end dropped inside the rect
+      // excalidraw-web: end dropped inside the rect, near its edge
+      drawSelfArrow(INSIDE, INSIDE_LOWER);
 
       // ambiguous → must be confirmed with a second click, so still in progress
       expect(h.state.multiElement).not.toBe(null);
@@ -246,7 +252,8 @@ describe("binding for simple arrows", () => {
     });
 
     it("inside -> inside stays in multi-point mode when the pointer moves on", () => {
-      const end: [number, number] = [INSIDE[0] + 50, INSIDE[1] + 50];
+      // excalidraw-web: end dropped inside the rect, near its edge
+      const end = INSIDE_LOWER;
       drawSelfArrow(INSIDE, end);
       // nudge within the commit zone of the point just placed
       mouse.moveTo(end[0] + 2, end[1] + 1);
@@ -256,17 +263,14 @@ describe("binding for simple arrows", () => {
       expect(h.state.multiElement!.points.length).toBe(3);
     });
 
-    // excalidraw-web: skipped pending an owner decision. Clicking inside a shape
-    // now snaps to its boundary, which also finishes a multi-point arrow there;
-    // whether a bend point may still be placed inside another shape is open
-    // (excalidraw-web docs/development-plan.md §Open).
-    it.skip("bend point inside a shape the arrow doesn't start on stays in multi-point mode when the pointer moves on", () => {
+    it("bend point inside a shape the arrow doesn't start on stays in multi-point mode when the pointer moves on", () => {
       UI.clickTool("arrow");
       mouse.reset();
       mouse.clickAt(...MIDDLE);
-      mouse.moveTo(...INSIDE);
-      mouse.clickAt(...INSIDE);
-      mouse.moveTo(INSIDE[0] + 2, INSIDE[1] + 1);
+      // excalidraw-web: deep inside, so the bend point stays free
+      mouse.moveTo(...DEEP_INSIDE);
+      mouse.clickAt(...DEEP_INSIDE);
+      mouse.moveTo(DEEP_INSIDE[0] + 2, DEEP_INSIDE[1] + 1);
 
       expect(h.state.multiElement).not.toBe(null);
       expect(h.state.activeTool.type).toBe("arrow");
@@ -319,7 +323,8 @@ describe("binding for simple arrows", () => {
     });
 
     it("binds an arrow ending on a frame child to the child", () => {
-      const arrow = drawArrow([350, 350]);
+      // excalidraw-web: 10px inside the child's right edge, within the snap distance
+      const arrow = drawArrow([390, 350]);
 
       expect(arrow.endBinding?.elementId).toBe("child");
     });
@@ -360,6 +365,29 @@ describe("binding for simple arrows", () => {
     });
 
     it("binds an arrow dropped at a circle's exact center", () => {
+      // excalidraw-web: a 24px circle, so its center is within the snap distance
+      const circle = API.createElement({
+        type: "ellipse",
+        x: 100,
+        y: -12,
+        width: 24,
+        height: 24,
+      });
+      API.setElements([circle]);
+
+      UI.clickTool("arrow");
+      mouse.reset();
+      mouse.downAt(-100, 0);
+      mouse.moveTo(100, 0);
+      mouse.moveTo(112, 0);
+      mouse.up();
+
+      const arrow = h.elements[h.elements.length - 1] as ExcalidrawArrowElement;
+      expect(arrow.endBinding?.elementId).toBe(circle.id);
+    });
+
+    // excalidraw-web: a large circle's center is beyond the snap distance
+    it("leaves an arrow dropped at a large circle's center unbound", () => {
       const circle = API.createElement({
         type: "ellipse",
         x: 100,
@@ -377,7 +405,7 @@ describe("binding for simple arrows", () => {
       mouse.up();
 
       const arrow = h.elements[h.elements.length - 1] as ExcalidrawArrowElement;
-      expect(arrow.endBinding?.elementId).toBe(circle.id);
+      expect(arrow.endBinding).toBe(null);
     });
   });
 

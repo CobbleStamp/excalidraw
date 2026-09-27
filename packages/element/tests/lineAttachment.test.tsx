@@ -144,11 +144,31 @@ describe("drawing and moving attached lines", () => {
     });
     API.setElements([shape]);
 
-    const line = drawLine([300, 50], [60, 50]);
+    // excalidraw-web: dropped 10px inside the edge, within the snap distance
+    const line = drawLine([300, 50], [90, 50]);
 
     expect(line.endBinding?.elementId).toBe("shape");
     const endX = line.x + line.points[line.points.length - 1][0];
     expect(Math.abs(endX - 100)).toBeLessThanOrEqual(1);
+  });
+
+  // excalidraw-web: deeper inside than the snap distance, the endpoint stays free
+  it("leaves an endpoint dropped deep inside a shape free", () => {
+    const shape = API.createElement({
+      id: "shape",
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+    API.setElements([shape]);
+
+    const line = drawLine([300, 50], [60, 50]);
+
+    expect(line.endBinding).toBeNull();
+    const endX = line.x + line.points[line.points.length - 1][0];
+    expect(Math.abs(endX - 60)).toBeLessThanOrEqual(1);
   });
 
   it("does not attach an endpoint beyond the snap distance", () => {

@@ -48,10 +48,12 @@ test("unselected bound arrows update when rotating their target elements", async
     width: 300,
     height: 120,
   });
+  // excalidraw-web: ends 10px inside the ellipse's left edge, within the snap
+  // distance (was 40px inside, where an endpoint now stays free)
   const ellipseArrow = UI.createElement("arrow", {
     x: -10,
     y: 80,
-    width: 50,
+    width: 20,
     height: 60,
   });
   const text = UI.createElement("text", {
@@ -75,8 +77,9 @@ test("unselected bound arrows update when rotating their target elements", async
   expect(ellipseArrow.y).toEqual(80);
   expect(ellipseArrow.points[0]).toEqual([0, 0]);
   // excalidraw-web: orbit mode for an end inside the ellipse (was inside mode), 0.5 gap to the rotated outline
-  expect(ellipseArrow.points[1][0]).toBeCloseTo(45.039, 1);
-  expect(ellipseArrow.points[1][1]).toBeCloseTo(98.056, 1);
+  // excalidraw-web: values follow the end moved to 10px inside the edge
+  expect(ellipseArrow.points[1][0]).toBeCloseTo(33.845, 1);
+  expect(ellipseArrow.points[1][1]).toBeCloseTo(124.259, 1);
 
   expect(textArrow.endBinding?.elementId).toEqual(text.id);
   expect(textArrow.x).toEqual(360);

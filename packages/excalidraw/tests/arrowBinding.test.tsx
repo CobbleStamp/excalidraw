@@ -146,7 +146,8 @@ describe("Arrow binding – non-default case (bindingPreference: disabled)", () 
 
       UI.clickTool("arrow");
       // Start inside the rectangle so startBinding can be created
-      mouse.down(200, 200);
+      // excalidraw-web: 10px inside the left edge, within the snap distance
+      mouse.down(110, 200);
       mouse.up(700, 200);
 
       await waitFor(() => {
@@ -178,7 +179,8 @@ describe("Arrow binding – non-default case (bindingPreference: disabled)", () 
 
       UI.clickTool("arrow");
       // Start inside the rectangle – binding is off, so no startBinding
-      mouse.down(200, 200);
+      // excalidraw-web: 10px inside the left edge, where it would otherwise bind
+      mouse.down(110, 200);
       mouse.up(700, 200);
 
       await waitFor(() => {
@@ -209,8 +211,9 @@ describe("Arrow binding – non-default case (bindingPreference: disabled)", () 
 
       UI.clickTool("arrow");
       // End inside the target rectangle – binding off -> no endBinding
+      // excalidraw-web: 10px inside the left edge, where it would otherwise bind
       mouse.down(100, 200);
-      mouse.up(600, 200);
+      mouse.up(510, 200);
 
       await waitFor(() => {
         const arrow = h.elements.find(
@@ -239,7 +242,8 @@ describe("Arrow binding – non-default case (bindingPreference: disabled)", () 
       expect(h.state.isBindingEnabled).toBe(true);
 
       UI.clickTool("arrow");
-      mouse.down(200, 200);
+      // excalidraw-web: 10px inside the left edge, within the snap distance
+      mouse.down(110, 200);
       mouse.up(700, 200);
 
       await waitFor(() => {

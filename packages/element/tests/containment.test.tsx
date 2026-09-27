@@ -483,7 +483,8 @@ describe("moving a container moves what it contains", () => {
 
     // draw an arrow from the contained shape to the outside shape
     Keyboard.keyPress(KEYS.A);
-    mouse.downAt(80, 80);
+    // excalidraw-web: start 10px inside the inner shape's edge, within the snap distance
+    mouse.downAt(100, 80);
     mouse.moveTo(530, 80);
     mouse.up();
     const arrow = h.elements.find((element) => element.type === "arrow")!;
