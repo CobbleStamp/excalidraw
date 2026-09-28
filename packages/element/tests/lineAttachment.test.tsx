@@ -540,6 +540,24 @@ describe("attachment criteria checked in the final pass", () => {
     expect(start.focusPoint).toBeDefined();
   });
 
+  it("with Alt held, attaches the endpoint where it is dropped inside, near the edge", () => {
+    API.setElements([box("shape", 0)]);
+    UI.clickTool("line");
+    mouse.downAt(300, 50);
+    Keyboard.withModifierKeys({ alt: true }, () => {
+      mouse.moveTo(90, 50);
+      mouse.up();
+    });
+    Keyboard.keyPress("Escape");
+    const line = h.elements.findLast(
+      (element) => element.type === "line",
+    ) as ExcalidrawLinearElement;
+
+    expect(line.endBinding?.elementId).toBe("shape");
+    expect(line.endBinding?.mode).toBe("inside");
+    expect(endPoint(line, 1)[0]).toBeCloseTo(90);
+  });
+
   it("shows the attach indicator before the endpoint is released", () => {
     API.setElements([box("shape", 0)]);
     UI.clickTool("line");
