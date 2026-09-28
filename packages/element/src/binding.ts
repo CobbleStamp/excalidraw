@@ -916,6 +916,24 @@ const getBindingStrategyForDraggingBindingElementEndpoints_simple = (
     ? appState.selectedLinearElement?.initialState.arrowStartIsInside
     : otherBinding?.mode === "inside" && otherPointWasInsideAtStart;
 
+  // excalidraw-web: the stored focus point is set by a pointer move's state
+  // update, which a quick drag's pointer up can outrun; project it here then,
+  // so the other end still snaps onto its outline
+  const altFocusPoint =
+    appState.selectedLinearElement?.initialState.altFocusPoint ||
+    (otherBindableElement &&
+      projectFixedPointOntoDiagonal(
+        arrow,
+        otherEndpoint,
+        otherBindableElement,
+        startDragged ? "end" : "start",
+        elementsMap,
+        appState.zoom,
+        appState.isMidpointSnappingEnabled &&
+          !opts?.angleLocked &&
+          !appState.gridModeEnabled,
+      ));
+
   let other: BindingStrategy = { mode: undefined };
   if (!otherNeverOverride) {
     if (
@@ -933,12 +951,12 @@ const getBindingStrategyForDraggingBindingElementEndpoints_simple = (
       otherBindableElement &&
       !otherFocusPointIsInElement &&
       !pointIsCloseToOtherElement &&
-      appState.selectedLinearElement?.initialState.altFocusPoint
+      altFocusPoint
     ) {
       other = {
         mode: "orbit",
         element: otherBindableElement,
-        focusPoint: appState.selectedLinearElement.initialState.altFocusPoint,
+        focusPoint: altFocusPoint,
       };
     } else if (opts?.angleLocked && otherBindableElement) {
       other = {

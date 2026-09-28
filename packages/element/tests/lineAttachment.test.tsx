@@ -13,10 +13,14 @@ import {
   unmountComponent,
 } from "@excalidraw/excalidraw/tests/test-utils";
 
+import { pointFrom } from "@excalidraw/math";
+
+import type { LocalPoint } from "@excalidraw/math";
 import type { NormalizedZoomValue } from "@excalidraw/excalidraw/types";
 
 import {
   attachLooseEndpoints,
+  getBindingStrategyForDraggingBindingElementEndpoints,
   DEFAULT_SNAP_DISTANCE_SCREEN_PX,
   getSnapDistanceScreenPx,
   maxBindingDistance_simple,
@@ -467,5 +471,156 @@ describe("drawing and moving attached lines", () => {
       moved.x + moved.points[1][0],
       moved.y + moved.points[1][1],
     ]).toEqual(endBefore);
+  });
+});
+
+describe("attachment criteria checked in the final pass", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    reseed(7);
+    mouse.reset();
+    await render(<Excalidraw handleKeyboardGlobally />);
+  });
+
+  const box = (id: string, x: number) =>
+    API.createElement({
+      id,
+      type: "rectangle",
+      x,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+
+  const endPoint = (line: ExcalidrawLinearElement, index: number) => {
+    const current = API.getElement(line);
+    return [
+      current.x + current.points[index][0],
+      current.y + current.points[index][1],
+    ];
+  };
+
+  it("snaps the start onto the outline even when a quick drag outruns the stored focus point", () => {
+    // a quick flick applies its last pointer move inside the pointer up, so
+    // the focus point that move stores in state is not there yet; the strategy
+    // must project the start itself
+    const shape = box("shape", 0);
+    const line = {
+      ...API.createElement({
+        type: "line",
+        x: 110,
+        y: 50,
+        points: [pointFrom<LocalPoint>(0, 0), pointFrom<LocalPoint>(190, 0)],
+      }),
+      startBinding: {
+        elementId: "shape",
+        fixedPoint: [1.1, 0.5],
+        mode: "orbit",
+      },
+    } as unknown as NonDeleted<ExcalidrawLinearElement>;
+    API.setElements([shape, line]);
+    const scene = h.app.scene;
+    const appState = { ...h.state, selectedLinearElement: null };
+
+    const { start } = getBindingStrategyForDraggingBindingElementEndpoints(
+      API.getElement(line) as any,
+      new Map([
+        [1, { point: pointFrom<LocalPoint>(190, 0), isDragging: true }],
+      ]),
+      300,
+      50,
+      scene.getNonDeletedElementsMap(),
+      scene.getNonDeletedElements(),
+      appState as any,
+      { newArrow: true },
+    );
+
+    expect(start.mode).toBe("orbit");
+    expect(start.element?.id).toBe("shape");
+    expect(start.focusPoint).toBeDefined();
+  });
+
+  it("shows the attach indicator before the endpoint is released", () => {
+    API.setElements([box("shape", 0)]);
+    UI.clickTool("line");
+    mouse.downAt(300, 50);
+    mouse.moveTo(110, 50);
+
+    expect(h.state.suggestedBinding?.element.id).toBe("shape");
+
+    mouse.moveTo(160, 50);
+    expect(h.state.suggestedBinding).toBeNull();
+    mouse.up();
+  });
+
+  it.each(["line", "arrow"] as const)(
+    "detaches a %s's endpoint dragged beyond the snap distance",
+    (tool) => {
+      API.setElements([box("shape", 0)]);
+      UI.clickTool(tool);
+      mouse.downAt(110, 50);
+      mouse.moveTo(300, 50);
+      mouse.up();
+      Keyboard.keyPress("Escape");
+      const line = h.elements.findLast(
+        (element) => element.type === tool,
+      ) as NonDeleted<ExcalidrawLinearElement>;
+      expect(line.startBinding?.elementId).toBe("shape");
+
+      API.setSelectedElements([line]);
+      const [startX, startY] = endPoint(line, 0);
+      mouse.downAt(startX, startY);
+      mouse.moveTo(startX + 60, startY + 150);
+      mouse.up();
+
+      expect(endPoint(line, 0)[1]).toBeGreaterThan(startY + 100);
+      expect(API.getElement(line).startBinding).toBeNull();
+      expect(API.getElement(box("shape", 0)).boundElements ?? []).toEqual([]);
+    },
+  );
+
+  it("moves the whole line when both of its shapes move together", () => {
+    API.setElements([box("left", 0), box("right", 300)]);
+    const line = drawLine([110, 50], [290, 50]);
+    expect(API.getElement(line).startBinding?.elementId).toBe("left");
+    expect(API.getElement(line).endBinding?.elementId).toBe("right");
+    const startBefore = endPoint(line, 0);
+    const endBefore = endPoint(line, 1);
+
+    API.setSelectedElements([
+      API.getElement(box("left", 0)),
+      API.getElement(box("right", 300)),
+    ]);
+    mouse.downAt(50, 50);
+    mouse.moveTo(50, 150);
+    mouse.up();
+
+    const [startX, startY] = endPoint(line, 0);
+    const [endX, endY] = endPoint(line, 1);
+    expect(startX).toBeCloseTo(startBefore[0]);
+    expect(startY).toBeCloseTo(startBefore[1] + 100);
+    expect(endX).toBeCloseTo(endBefore[0]);
+    expect(endY).toBeCloseTo(endBefore[1] + 100);
+  });
+
+  it("reverses the shape move and every endpoint move with one undo", () => {
+    API.setElements([box("shape", 0), box("far", 600)]);
+    const right = drawLine([110, 50], [300, 50]);
+    const below = drawLine([50, 110], [50, 300]);
+    const rightBefore = endPoint(right, 0);
+    const belowBefore = endPoint(below, 0);
+
+    mouse.clickAt(0, 0);
+    mouse.downAt(50, 50);
+    mouse.moveTo(250, 250);
+    mouse.up();
+    expect(endPoint(right, 0)).not.toEqual(rightBefore);
+    expect(endPoint(below, 0)).not.toEqual(belowBefore);
+
+    Keyboard.undo();
+
+    expect(API.getElement(box("shape", 0)).x).toBe(0);
+    expect(endPoint(right, 0)).toEqual(rightBefore);
+    expect(endPoint(below, 0)).toEqual(belowBefore);
   });
 });

@@ -519,6 +519,45 @@ describe("moving a container moves what it contains", () => {
     expect(movedInner.y).toBe(150);
   });
 
+  it("keeps a plain line attached to a contained shape following it", () => {
+    const container = makeContainer();
+    const inner = API.createElement({
+      id: "inner",
+      type: "rectangle",
+      x: 50,
+      y: 50,
+      width: 60,
+      height: 60,
+    });
+    API.setElements([container, inner]);
+
+    // excalidraw-web: a line from just outside the inner shape to far outside the container
+    Keyboard.keyPress(KEYS.L);
+    mouse.downAt(115, 80);
+    mouse.moveTo(600, 80);
+    mouse.up();
+    Keyboard.keyPress(KEYS.ESCAPE);
+    const line = h.elements.find((element) => element.type === "line")!;
+    expect((line as any).startBinding?.elementId).toBe("inner");
+    const farEndBefore = [
+      line.x + (line as any).points[1][0],
+      line.y + (line as any).points[1][1],
+    ];
+
+    dragBy(API.getElement(container), 0, 100);
+
+    const moved = API.getElement(line) as any;
+    const movedInner = API.getElement(inner);
+    expect(movedInner.y).toBe(150);
+    expect(moved.startBinding?.elementId).toBe("inner");
+    expect(moved.y).toBeGreaterThanOrEqual(movedInner.y);
+    expect(moved.y).toBeLessThanOrEqual(movedInner.y + movedInner.height);
+    expect([
+      moved.x + moved.points[1][0],
+      moved.y + moved.points[1][1],
+    ]).toEqual(farEndBefore);
+  });
+
   it("alt-dragging a container duplicates it with its contents", () => {
     const container = makeContainer();
     const text = makeTextInside();
