@@ -828,6 +828,9 @@ class App extends React.Component<AppProps, AppState> {
     const api: ExcalidrawImperativeAPI = {
       isDestroyed: false,
       updateScene: this.updateScene,
+      // excalidraw-web: lets the app import a drawing file into a cloud
+      // drawing the way pasting adds elements
+      addElementsFromPasteOrLibrary: this.addElementsFromPasteOrLibrary,
       applyDeltas: this.applyDeltas,
       mutateElement: this.mutateElement,
       updateLibrary: this.library.updateLibrary,

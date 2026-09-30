@@ -1351,6 +1351,9 @@ export interface ExcalidrawImperativeAPI {
   /** Whether the editor has been unmounted and the API is no longer usable. */
   isDestroyed: boolean;
   updateScene: InstanceType<typeof App>["updateScene"];
+  // excalidraw-web: adds elements as pasting does: fresh ids, attachments
+  // and groups kept, placed at a point, selected, as one undo step
+  addElementsFromPasteOrLibrary: InstanceType<typeof App>["addElementsFromPasteOrLibrary"];
   applyDeltas: InstanceType<typeof App>["applyDeltas"];
   mutateElement: InstanceType<typeof App>["mutateElement"];
   updateLibrary: InstanceType<typeof Library>["updateLibrary"];
