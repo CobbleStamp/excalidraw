@@ -80,6 +80,17 @@ describe("increments a cloud drawing relies on", () => {
 
     mouse.clickAt(rectangle.x + 5, rectangle.y + 5);
 
+    // the selection is recorded (it is an undo step)...
+    expect(durable().length).toBeGreaterThan(0);
+    expect(
+      durable().some(
+        (increment) =>
+          increment.delta.appState.delta.inserted.selectedElementIds?.[
+            rectangle.id
+          ],
+      ),
+    ).toBe(true);
+    // ...but changes no element
     for (const increment of durable()) {
       const { added, removed, updated } = increment.delta.elements;
       expect({ added, removed, updated }).toEqual({
