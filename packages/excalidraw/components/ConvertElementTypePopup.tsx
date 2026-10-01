@@ -51,6 +51,7 @@ import { LinearElementEditor } from "@excalidraw/element";
 import {
   newArrowElement,
   newElement,
+  newPolygonElement,
   newLinearElement,
 } from "@excalidraw/element";
 
@@ -67,6 +68,7 @@ import type {
   ConvertibleLinearTypes,
   ConvertibleTypes,
   ExcalidrawDiamondElement,
+  ExcalidrawPolygonElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
   ExcalidrawLinearElement,
@@ -88,6 +90,7 @@ import "./ConvertElementTypePopup.scss";
 import { IconButton } from "./IconButton";
 import {
   DiamondIcon,
+  PolygonIcon,
   elbowArrowIcon,
   EllipseIcon,
   LineIcon,
@@ -106,11 +109,12 @@ const GAP_VERTICAL = 10;
 type ExcalidrawConvertibleElement =
   | ExcalidrawRectangleElement
   | ExcalidrawDiamondElement
+  | ExcalidrawPolygonElement
   | ExcalidrawEllipseElement
   | ExcalidrawLinearElement;
 
 // indicates order of switching
-const GENERIC_TYPES = ["rectangle", "diamond", "ellipse"] as const;
+const GENERIC_TYPES = ["rectangle", "diamond", "polygon", "ellipse"] as const;
 // indicates order of switching
 const LINEAR_TYPES = [
   "line",
@@ -308,6 +312,7 @@ const Panel = ({
       ? [
           ["rectangle", RectangleIcon],
           ["diamond", DiamondIcon],
+          ["polygon", PolygonIcon],
           ["ellipse", EllipseIcon],
         ]
       : [];
@@ -854,18 +859,22 @@ const convertElementType = <
   ShapeCache.delete(element);
 
   if (isConvertibleGenericType(targetType)) {
+    const roundness = element.roundness
+      ? {
+          type: isUsingAdaptiveRadius(targetType)
+            ? ROUNDNESS.ADAPTIVE_RADIUS
+            : ROUNDNESS.PROPORTIONAL_RADIUS,
+        }
+      : element.roundness;
     const nextElement = bumpVersion(
-      newElement({
-        ...element,
-        type: targetType,
-        roundness: element.roundness
-          ? {
-              type: isUsingAdaptiveRadius(targetType)
-                ? ROUNDNESS.ADAPTIVE_RADIUS
-                : ROUNDNESS.PROPORTIONAL_RADIUS,
-            }
-          : element.roundness,
-      }),
+      targetType === "polygon"
+        ? newPolygonElement({
+            ...element,
+            type: targetType,
+            roundness,
+            sides: app.state.currentItemPolygonSides,
+          })
+        : newElement({ ...element, type: targetType, roundness }),
     ) as typeof element;
 
     return nextElement;

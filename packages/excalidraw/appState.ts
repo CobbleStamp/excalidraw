@@ -13,6 +13,7 @@ import {
   DEFAULT_GRID_STEP,
   isTestEnv,
   DEFAULT_STICKY_NOTE_BG,
+  DEFAULT_POLYGON_SIDES,
 } from "@excalidraw/common";
 
 import type { AppState, InputDevice, NormalizedZoomValue } from "./types";
@@ -42,6 +43,7 @@ export const getDefaultAppState = (): Omit<
     currentItemStickynoteStrokeColor: DEFAULT_ELEMENT_PROPS.strokeColor,
     currentItemStickynoteBackgroundColor: DEFAULT_STICKY_NOTE_BG,
     currentItemRoundness: isTestEnv() ? "sharp" : "round",
+    currentItemPolygonSides: DEFAULT_POLYGON_SIDES,
     currentItemArrowType: ARROW_TYPE.round,
     currentItemStrokeStyle: DEFAULT_ELEMENT_PROPS.strokeStyle,
     currentItemStrokeWidthKey: DEFAULT_ELEMENT_STROKE_WIDTH_KEY,
@@ -180,6 +182,7 @@ const APP_STATE_STORAGE_CONF = (<
     export: false,
     server: false,
   },
+  currentItemPolygonSides: { browser: true, export: false, server: false },
   currentItemOpacity: { browser: true, export: false, server: false },
   currentItemRoughness: { browser: true, export: false, server: false },
   currentItemStrokeVariability: {

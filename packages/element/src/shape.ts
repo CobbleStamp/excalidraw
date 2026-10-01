@@ -55,7 +55,8 @@ import {
   isIframeLikeElement,
   isLinearElement,
 } from "./typeChecks";
-import { getCornerRadius, isPathALoop } from "./utils";
+import { getCornerRadius, getPolygonCornerRadius, isPathALoop } from "./utils";
+import { getPolygonCornerArcs, getPolygonPoints } from "./polygon";
 import { headingForPointIsHorizontal } from "./heading";
 
 import { canChangeRoundness } from "./comparisons";
@@ -230,6 +231,7 @@ export const generateRoughOptions = (
     case "iframe":
     case "embeddable":
     case "diamond":
+    case "polygon":
     case "ellipse": {
       options.fillStyle = element.fillStyle;
       options.fill = isTransparent(element.backgroundColor)
@@ -877,6 +879,29 @@ const _generateElementShape = (
       }
       return shape;
     }
+    case "polygon": {
+      const points = getPolygonPoints(element);
+      if (!element.roundness) {
+        return generator.polygon(
+          points.map(([x, y]) => [x, y]),
+          generateRoughOptions(element, false, isDarkMode),
+        );
+      }
+      // each corner is a curve from one side to the next, through the corner
+      const path = getPolygonCornerArcs(
+        points,
+        getPolygonCornerRadius(element, points),
+      ).map(
+        ([[ax, ay], [cx, cy], [bx, by]], i) =>
+          `${
+            i === 0 ? "M" : "L"
+          } ${ax} ${ay} C ${cx} ${cy}, ${cx} ${cy}, ${bx} ${by}`,
+      );
+      return generator.path(
+        `${path.join(" ")} Z`,
+        generateRoughOptions(element, true, isDarkMode),
+      );
+    }
     case "ellipse": {
       const shape: ElementShapes[typeof element.type] = generator.ellipse(
         element.width / 2,
@@ -1092,6 +1117,7 @@ export const getElementShape = <Point extends GlobalPoint | LocalPoint>(
     case "rectangle":
     case "stickynote":
     case "diamond":
+    case "polygon":
     case "frame":
     case "magicframe":
     case "embeddable":

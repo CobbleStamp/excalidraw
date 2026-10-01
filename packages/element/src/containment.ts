@@ -1,8 +1,9 @@
 /**
- * Containment: moving a rectangle, ellipse or diamond also moves every element
- * whose outline lies fully inside it, with no setup step. "Inside" is decided
- * by geometry alone, ignoring stacking order, so dragging an element out of a
- * container releases it and dragging one in makes it follow.
+ * Containment: moving a rectangle, ellipse, diamond or polygon also moves
+ * every element whose outline lies fully inside it, with no setup step.
+ * "Inside" is decided by geometry alone, ignoring stacking order, so dragging
+ * an element out of a container releases it and dragging one in makes it
+ * follow.
  */
 import { arrayToMap } from "@excalidraw/common";
 import { pointFrom, pointRotateRads } from "@excalidraw/math";
@@ -12,6 +13,7 @@ import type { GlobalPoint, Radians } from "@excalidraw/math";
 import { getElementAbsoluteCoords } from "./bounds";
 import { addElementsToFrame, removeElementsFromFrame } from "./frame";
 import { getElementsInGroup } from "./groups";
+import { getPolygonPoints, isPointInsidePolygonPoints } from "./polygon";
 import {
   isFrameLikeElement,
   isFreeDrawElement,
@@ -39,7 +41,8 @@ export const isContainerShape = (element: ExcalidrawElement): boolean =>
   !element.isDeleted &&
   (element.type === "rectangle" ||
     element.type === "ellipse" ||
-    element.type === "diamond");
+    element.type === "diamond" ||
+    element.type === "polygon");
 
 const getCenter = (
   element: ExcalidrawElement,
@@ -97,7 +100,12 @@ const getOutlinePoints = (
   }
 
   const corners: [number, number][] =
-    element.type === "diamond"
+    element.type === "polygon"
+      ? getPolygonPoints(element).map(([x, y]) => [
+          x - halfWidth,
+          y - halfHeight,
+        ])
+      : element.type === "diamond"
       ? [
           [0, -halfHeight],
           [halfWidth, 0],
@@ -146,6 +154,16 @@ const isPointInsideContainer = (
   }
   if (container.type === "diamond") {
     return offsetX / halfWidth + offsetY / halfHeight <= 1;
+  }
+  if (container.type === "polygon") {
+    return isPointInsidePolygonPoints(
+      getPolygonPoints(container),
+      [
+        local[0] - containerCenter[0] + container.width / 2,
+        local[1] - containerCenter[1] + container.height / 2,
+      ],
+      EDGE_TOLERANCE,
+    );
   }
   return offsetX <= halfWidth && offsetY <= halfHeight;
 };

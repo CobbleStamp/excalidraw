@@ -44,10 +44,12 @@ import {
 import { getElementShape } from "./shape";
 import {
   deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructRectanguloidElement,
 } from "./utils";
 import { intersectElementWithLineSegment } from "./collision";
 import { elementOverlapsWithFrame, getContainingFrame } from "./frame";
+import { getPolygonPoints } from "./polygon";
 
 import type { Drawable, Op } from "roughjs/bin/core";
 import type { Point as RoughPoint } from "roughjs/bin/geometry";
@@ -199,6 +201,20 @@ export class ElementBounds {
       const maxX = Math.max(x11, x12, x22, x21);
       const maxY = Math.max(y11, y12, y22, y21);
       bounds = [minX, minY, maxX, maxY];
+    } else if (element.type === "polygon") {
+      const corners = getPolygonPoints(element).map(([x, y]) =>
+        pointRotateRads(
+          pointFrom(x1 + x, y1 + y),
+          pointFrom(cx, cy),
+          element.angle,
+        ),
+      );
+      bounds = [
+        Math.min(...corners.map(([x]) => x)),
+        Math.min(...corners.map(([, y]) => y)),
+        Math.max(...corners.map(([x]) => x)),
+        Math.max(...corners.map(([, y]) => y)),
+      ];
     } else if (element.type === "ellipse") {
       const w = (x2 - x1) / 2;
       const h = (y2 - y1) / 2;
@@ -359,6 +375,14 @@ export const getElementLineSegments = (
     return [...rotatedSides, ...cornerSegments];
   } else if (element.type === "diamond") {
     const [sides, corners] = deconstructDiamondElement(element);
+    const cornerSegments = corners
+      .map((corner) => getSegmentsOnCurve(corner, center, element.angle))
+      .flat();
+    const rotatedSides = getRotatedSides(sides, center, element.angle);
+
+    return [...rotatedSides, ...cornerSegments];
+  } else if (element.type === "polygon") {
+    const [sides, corners] = deconstructPolygonElement(element);
     const cornerSegments = corners
       .map((corner) => getSegmentsOnCurve(corner, center, element.angle))
       .flat();

@@ -150,6 +150,7 @@ export type ToolType =
   | "lasso"
   | "rectangle"
   | "diamond"
+  | "polygon"
   | "ellipse"
   | "arrow"
   | "line"
@@ -451,6 +452,8 @@ export interface AppState {
   currentHoveredFontFamily: FontFamilyValues | null;
   currentItemRoundness: StrokeRoundness;
   currentItemArrowType: "sharp" | "round" | "elbow";
+  /** The corner count the polygon tool draws with */
+  currentItemPolygonSides: number;
   viewBackgroundColor: string;
   scrollX: number;
   scrollY: number;
@@ -1353,7 +1356,9 @@ export interface ExcalidrawImperativeAPI {
   updateScene: InstanceType<typeof App>["updateScene"];
   // excalidraw-web: adds elements as pasting does: fresh ids, attachments
   // and groups kept, placed at a point, selected, as one undo step
-  addElementsFromPasteOrLibrary: InstanceType<typeof App>["addElementsFromPasteOrLibrary"];
+  addElementsFromPasteOrLibrary: InstanceType<
+    typeof App
+  >["addElementsFromPasteOrLibrary"];
   applyDeltas: InstanceType<typeof App>["applyDeltas"];
   mutateElement: InstanceType<typeof App>["mutateElement"];
   updateLibrary: InstanceType<typeof Library>["updateLibrary"];

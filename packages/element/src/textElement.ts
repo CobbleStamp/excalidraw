@@ -32,6 +32,7 @@ import {
   isStickyNoteElement,
   isTextElement,
 } from "./typeChecks";
+import { getPolygonTextAreaFraction } from "./polygon";
 
 import { isNonDeletedElement } from ".";
 
@@ -120,7 +121,7 @@ export const redrawTextBoundingBox = (
     if (!isArrowElement(container) && metrics.height > maxContainerHeight) {
       const nextHeight = computeContainerDimensionForBoundText(
         metrics.height,
-        container.type,
+        container,
       );
       scene.mutateElement(container, { height: nextHeight });
       updateOriginalContainerCache(container.id, nextHeight);
@@ -129,7 +130,7 @@ export const redrawTextBoundingBox = (
     if (metrics.width > maxContainerWidth) {
       const nextWidth = computeContainerDimensionForBoundText(
         metrics.width,
-        container.type,
+        container,
       );
       scene.mutateElement(container, { width: nextWidth });
     }
@@ -207,7 +208,7 @@ export const handleBindTextResize = (
     if (nextHeight > maxHeight) {
       containerHeight = computeContainerDimensionForBoundText(
         nextHeight,
-        container.type,
+        container,
       );
 
       // Crossing the opposite edge swaps the anchor for text-driven growth.
@@ -410,6 +411,11 @@ export const getContainerCoords = (container: ExcalidrawElement) => {
     offsetX += container.width / 4;
     offsetY += container.height / 4;
   }
+  if (container.type === "polygon") {
+    const margin = (1 - getPolygonTextAreaFraction(container.sides)) / 2;
+    offsetX += container.width * margin;
+    offsetY += container.height * margin;
+  }
   return {
     x: container.x + offsetX,
     y: container.y + offsetY,
@@ -481,6 +487,7 @@ const VALID_CONTAINER_TYPES = new Set([
   "stickynote",
   "ellipse",
   "diamond",
+  "polygon",
   "arrow",
 ]);
 
@@ -491,11 +498,20 @@ export const isValidTextContainer = (element: {
 
 export const computeContainerDimensionForBoundText = (
   dimension: number,
-  containerType: ExtractSetType<typeof VALID_CONTAINER_TYPES>,
+  container: {
+    type: ExtractSetType<typeof VALID_CONTAINER_TYPES>;
+    sides?: number;
+  },
 ) => {
+  const containerType = container.type;
   dimension = Math.ceil(dimension);
   const padding = BOUND_TEXT_PADDING * 2;
 
+  if (containerType === "polygon") {
+    return Math.ceil(
+      (dimension + padding) / getPolygonTextAreaFraction(container.sides),
+    );
+  }
   if (containerType === "ellipse") {
     return Math.round(((dimension + padding) / Math.sqrt(2)) * 2);
   }
@@ -529,6 +545,12 @@ export const getBoundTextMaxWidth = (
     // The width of the largest rectangle inscribed inside a rhombus is
     // Math.round(width / 2) - https://github.com/excalidraw/excalidraw/pull/6265
     return Math.round(width / 2) - BOUND_TEXT_PADDING * 2;
+  }
+  if (container.type === "polygon") {
+    return (
+      Math.round(width * getPolygonTextAreaFraction(container.sides)) -
+      BOUND_TEXT_PADDING * 2
+    );
   }
   return (
     width -
@@ -565,6 +587,12 @@ export const getBoundTextMaxHeight = (
     // The height of the largest rectangle inscribed inside a rhombus is
     // Math.round(height / 2) - https://github.com/excalidraw/excalidraw/pull/6265
     return Math.round(height / 2) - BOUND_TEXT_PADDING * 2;
+  }
+  if (container.type === "polygon") {
+    return (
+      Math.round(height * getPolygonTextAreaFraction(container.sides)) -
+      BOUND_TEXT_PADDING * 2
+    );
   }
   return height - BOUND_TEXT_PADDING * 2;
 };

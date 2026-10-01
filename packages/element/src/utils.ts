@@ -39,7 +39,11 @@ import { elementCenterPoint, getDiamondPoints } from "./bounds";
 
 import { generateLinearCollisionShape } from "./shape";
 
-import { hitElementItself, isPointInElement } from "./collision";
+import {
+  hitElementItself,
+  intersectElementWithLineSegment,
+  isPointInElement,
+} from "./collision";
 import { LinearElementEditor } from "./linearElementEditor";
 import { isElbowArrow, isRectangularElement } from "./typeChecks";
 import { getBindingGap, maxBindingDistance_simple } from "./binding";
@@ -48,6 +52,7 @@ import {
   getGlobalFixedPointForBindableElement,
   normalizeFixedPoint,
 } from "./binding";
+import { getPolygonCornerArcs, getPolygonPoints } from "./polygon";
 import { getStickyNoteCornerRadius } from "./stickyNote";
 
 import type {
@@ -58,6 +63,7 @@ import type {
   ExcalidrawElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawPolygonElement,
   ExcalidrawRectanguloidElement,
 } from "./types";
 
@@ -507,6 +513,74 @@ export function deconstructDiamondElement(
   return shape;
 }
 
+/**
+ * The radius of a polygon's corners: the rounded-corners radius for its
+ * shortest side, or a sliver when the corners are sharp.
+ */
+export const getPolygonCornerRadius = (
+  element: ExcalidrawPolygonElement,
+  points: readonly LocalPoint[] = getPolygonPoints(element),
+): number => {
+  const shortestSide = Math.min(
+    ...points.map((point, i) =>
+      pointDistance(point, points[(i + 1) % points.length]),
+    ),
+  );
+  return element.roundness
+    ? getCornerRadius(shortestSide, element)
+    : shortestSide * 0.01;
+};
+
+/**
+ * Get the **unrotated** building components of a polygon element in the form
+ * of line segments and curves as a tuple, in this order: one curve per
+ * corner and one segment per side between them.
+ *
+ * @param element The element to deconstruct
+ * @param offset An optional offset
+ * @returns Tuple of line **unrotated** segments (0) and curves (1)
+ */
+export function deconstructPolygonElement(
+  element: ExcalidrawPolygonElement,
+  offset: number = 0,
+): ElementShape {
+  const cachedShape = getElementShapesCacheEntry(element, offset);
+
+  if (cachedShape) {
+    return cachedShape;
+  }
+
+  const localPoints = getPolygonPoints(element);
+  const radius = getPolygonCornerRadius(element, localPoints);
+  const points = localPoints.map((point) =>
+    pointFrom<GlobalPoint>(element.x + point[0], element.y + point[1]),
+  );
+  const baseCorners = getPolygonCornerArcs(points, radius).map(
+    ([start, corner, end]) => curve(start, corner, corner, end),
+  );
+
+  const corners =
+    offset > 0
+      ? baseCorners.map(
+          (corner) =>
+            curveCatmullRomCubicApproxPoints(
+              curveOffsetPoints(corner, offset),
+            )!,
+        )
+      : baseCorners.map((corner) => [corner]);
+
+  const sides = corners.map((corner, i) => {
+    const next = corners[(i + 1) % corners.length];
+    return lineSegment<GlobalPoint>(corner[corner.length - 1][3], next[0][0]);
+  });
+
+  const shape = [sides, corners.flat()] as ElementShape;
+
+  setElementShapesCacheEntry(element, shape, offset);
+
+  return shape;
+}
+
 // Checks if the first and last point are close enough
 // to be considered a loop
 export const isPathALoop = (
@@ -750,6 +824,28 @@ export const getAllMidpoints = (
     return getDiamondBaseCorners(element).map((curve) =>
       pointRotateRads(bezierEquation(curve, 0.5), center, element.angle),
     );
+  }
+
+  if (element.type === "polygon") {
+    // where the element's axes cross the outline, which for most corner
+    // counts is not the middle of the box's side
+    const reach = Math.max(element.width, element.height) * 2;
+    return [
+      [reach, 0],
+      [0, reach],
+      [-reach, 0],
+      [0, -reach],
+    ].map(([dx, dy]) => {
+      const ray = lineSegment<GlobalPoint>(
+        center,
+        pointRotateRads(
+          pointFrom<GlobalPoint>(center[0] + dx, center[1] + dy),
+          center,
+          element.angle,
+        ),
+      );
+      return intersectElementWithLineSegment(element, elementsMap, ray)[0];
+    });
   }
 
   return [

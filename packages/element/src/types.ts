@@ -108,6 +108,14 @@ export type ExcalidrawDiamondElement = _ExcalidrawElementBase & {
   type: "diamond";
 };
 
+/** A regular polygon stretched to fill its box, with a flat bottom edge */
+export type ExcalidrawPolygonElement = _ExcalidrawElementBase &
+  Readonly<{
+    type: "polygon";
+    /** The number of corners, from `POLYGON_MIN_SIDES` to `POLYGON_MAX_SIDES` */
+    sides: number;
+  }>;
+
 export type ExcalidrawEllipseElement = _ExcalidrawElementBase & {
   type: "ellipse";
 };
@@ -202,6 +210,7 @@ export type ExcalidrawFlowchartNodeElement =
   | ExcalidrawRectangleElement
   | ExcalidrawStickyNoteElement
   | ExcalidrawDiamondElement
+  | ExcalidrawPolygonElement
   | ExcalidrawEllipseElement;
 
 export type ExcalidrawRectanguloidElement =
@@ -222,6 +231,7 @@ export type ExcalidrawRectanguloidElement =
  */
 export type ExcalidrawElement =
   | ExcalidrawGenericElement
+  | ExcalidrawPolygonElement
   | ExcalidrawStickyNoteElement
   | ExcalidrawTextElement
   | ExcalidrawLinearElement
@@ -294,6 +304,7 @@ export type ExcalidrawBindableElement =
   | ExcalidrawRectangleElement
   | ExcalidrawStickyNoteElement
   | ExcalidrawDiamondElement
+  | ExcalidrawPolygonElement
   | ExcalidrawEllipseElement
   | ExcalidrawTextElement
   | ExcalidrawImageElement
@@ -306,6 +317,7 @@ export type ExcalidrawTextContainer =
   | ExcalidrawRectangleElement
   | ExcalidrawStickyNoteElement
   | ExcalidrawDiamondElement
+  | ExcalidrawPolygonElement
   | ExcalidrawEllipseElement
   | ExcalidrawArrowElement;
 
@@ -491,6 +503,10 @@ export type ExcalidrawLinearElementSubType =
   | "curvedArrow"
   | "elbowArrow";
 
-export type ConvertibleGenericTypes = "rectangle" | "diamond" | "ellipse";
+export type ConvertibleGenericTypes =
+  | "rectangle"
+  | "diamond"
+  | "polygon"
+  | "ellipse";
 export type ConvertibleLinearTypes = ExcalidrawLinearElementSubType;
 export type ConvertibleTypes = ConvertibleGenericTypes | ConvertibleLinearTypes;

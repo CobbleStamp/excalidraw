@@ -128,6 +128,7 @@ import {
   newEmbeddableElement,
   newMagicFrameElement,
   newStickyNoteElement,
+  newPolygonElement,
   newIframeElement,
   newArrowElement,
   newElement,
@@ -10488,6 +10489,7 @@ class App extends React.Component<AppProps, AppState> {
       | "rectangle"
       | "stickynote"
       | "diamond"
+      | "polygon"
       | "ellipse"
       | "iframe"
       | "embeddable",
@@ -10509,7 +10511,11 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   private createGenericElementOnPointerDown = (
-    elementType: ExcalidrawGenericElement["type"] | "embeddable" | "stickynote",
+    elementType:
+      | ExcalidrawGenericElement["type"]
+      | "embeddable"
+      | "stickynote"
+      | "polygon",
     pointerDownState: PointerDownState,
   ): void => {
     const [gridX, gridY] = getGridPoint(
@@ -10556,6 +10562,12 @@ class App extends React.Component<AppProps, AppState> {
       element = newStickyNoteElement({
         type: "stickynote",
         ...baseElementAttributes,
+      });
+    } else if (elementType === "polygon") {
+      element = newPolygonElement({
+        type: "polygon",
+        ...baseElementAttributes,
+        sides: this.state.currentItemPolygonSides,
       });
     } else {
       element = newElement({

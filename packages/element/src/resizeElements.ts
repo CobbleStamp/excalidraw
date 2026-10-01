@@ -63,6 +63,7 @@ import {
 } from "./typeChecks";
 
 import { isInGroup } from "./groups";
+import { flipsVerticallyByTurning } from "./polygon";
 import {
   getStickyNoteMinSize,
   getStickyNoteResizeIntent,
@@ -87,6 +88,8 @@ import type {
   ElementsMap,
   ExcalidrawElbowArrowElement,
   ExcalidrawArrowElement,
+  FixedPoint,
+  FixedPointBinding,
 } from "./types";
 import type { ElementUpdate } from "./mutateElement";
 
@@ -927,6 +930,17 @@ export const resizeSingleElement = (
       ...rescaledPoints,
     };
 
+    if (flipsVerticallyByTurning(origElement)) {
+      // past the opposite edge, it turns upside down
+      const angle = normalizeRadians(
+        (origElement.angle + (nextHeight < 0 ? Math.PI : 0)) as Radians,
+      );
+      updates = { ...updates, angle };
+      if (boundTextElement) {
+        scene.mutateElement(boundTextElement, { angle });
+      }
+    }
+
     if (isBindingElement(latestElement)) {
       if (latestElement.startBinding) {
         updates = {
@@ -1415,7 +1429,8 @@ export const resizeMultipleElements = (
       const width = orig.width * scaleX;
       const height = orig.height * scaleY;
       const angle = normalizeRadians(
-        (orig.angle * flipFactorX * flipFactorY) as Radians,
+        (orig.angle * flipFactorX * flipFactorY +
+          (flipByY && flipsVerticallyByTurning(orig) ? Math.PI : 0)) as Radians,
       );
 
       const isLinearOrFreeDraw =
@@ -1446,30 +1461,33 @@ export const resizeMultipleElements = (
       if (isElbowArrow(orig)) {
         // Mirror fixed point binding for elbow arrows
         // when resize goes into the negative direction
+        const mirrorFixedPoint = ({
+          elementId,
+          fixedPoint,
+        }: FixedPointBinding) => {
+          const target = originalElementsMap.get(elementId);
+          // a shape flipped by a half turn has the point mirrored in its
+          // own frame left to right instead (see `flipsVerticallyByTurning`)
+          const turned =
+            flipByY &&
+            !!target &&
+            flipsVerticallyByTurning(target) &&
+            targetElements.some(({ orig }) => orig.id === elementId);
+          return [
+            flipByX !== turned ? -fixedPoint[0] + 1 : fixedPoint[0],
+            flipByY && !turned ? -fixedPoint[1] + 1 : fixedPoint[1],
+          ] as FixedPoint;
+        };
         if (orig.startBinding) {
           update.startBinding = {
             ...orig.startBinding,
-            fixedPoint: [
-              flipByX
-                ? -orig.startBinding.fixedPoint[0] + 1
-                : orig.startBinding.fixedPoint[0],
-              flipByY
-                ? -orig.startBinding.fixedPoint[1] + 1
-                : orig.startBinding.fixedPoint[1],
-            ],
+            fixedPoint: mirrorFixedPoint(orig.startBinding),
           };
         }
         if (orig.endBinding) {
           update.endBinding = {
             ...orig.endBinding,
-            fixedPoint: [
-              flipByX
-                ? -orig.endBinding.fixedPoint[0] + 1
-                : orig.endBinding.fixedPoint[0],
-              flipByY
-                ? -orig.endBinding.fixedPoint[1] + 1
-                : orig.endBinding.fixedPoint[1],
-            ],
+            fixedPoint: mirrorFixedPoint(orig.endBinding),
           };
         }
         if (orig.fixedSegments && rescaledPoints.points) {

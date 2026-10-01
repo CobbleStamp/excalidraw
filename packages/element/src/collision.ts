@@ -39,6 +39,7 @@ import {
   getElementBounds,
   pointInsideBounds,
 } from "./bounds";
+import { getPolygonPoints } from "./polygon";
 import {
   hasBoundTextElement,
   isBindableElement,
@@ -51,6 +52,7 @@ import {
 } from "./typeChecks";
 import {
   deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructLinearOrFreeDrawElement,
   deconstructRectanguloidElement,
 } from "./utils";
@@ -73,6 +75,7 @@ import type {
   ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
+  ExcalidrawPolygonElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
   ExcalidrawRectanguloidElement,
@@ -507,6 +510,14 @@ export const intersectElementWithLineSegment = (
         offset,
         onlyFirst,
       );
+    case "polygon":
+      return intersectPolygonWithLineSegment(
+        element,
+        elementsMap,
+        line,
+        offset,
+        onlyFirst,
+      );
     case "ellipse":
       return intersectEllipseWithLineSegment(
         element,
@@ -749,6 +760,48 @@ const intersectDiamondWithLineSegment = (
   return intersections;
 };
 
+/** Where a line segment crosses a polygon's outline, rotation included */
+const intersectPolygonWithLineSegment = (
+  element: ExcalidrawPolygonElement,
+  elementsMap: ElementsMap,
+  l: LineSegment<GlobalPoint>,
+  offset: number = 0,
+  onlyFirst = false,
+): GlobalPoint[] => {
+  const center = elementCenterPoint(element, elementsMap);
+  const rotatedIntersector = lineSegment(
+    pointRotateRads(l[0], center, -element.angle as Radians),
+    pointRotateRads(l[1], center, -element.angle as Radians),
+  );
+
+  const [sides, corners] = deconstructPolygonElement(element, offset);
+  const intersections: GlobalPoint[] = [];
+
+  lineIntersections(
+    sides,
+    rotatedIntersector,
+    intersections,
+    center,
+    element.angle,
+    onlyFirst,
+  );
+
+  if (onlyFirst && intersections.length > 0) {
+    return intersections;
+  }
+
+  curveIntersections(
+    corners,
+    rotatedIntersector,
+    intersections,
+    center,
+    element.angle,
+    onlyFirst,
+  );
+
+  return intersections;
+};
+
 /**
  *
  * @param element
@@ -876,6 +929,23 @@ export const isBindableElementInsideOtherBindable = (
         pointFrom(x + leftX - offset, y + leftY), // left
       ];
       return corners.map((corner) => pointRotateRads(corner, center, angle));
+    }
+    if (element.type === "polygon") {
+      // Each corner, moved outward from the middle by the offset
+      return getPolygonPoints(element).map((point) => {
+        const corner = pointFrom<GlobalPoint>(x + point[0], y + point[1]);
+        return pointRotateRads(
+          pointFromVector(
+            vectorScale(
+              vectorNormalize(vectorFromPoint(corner, center)),
+              offset,
+            ),
+            corner,
+          ),
+          center,
+          angle,
+        );
+      });
     }
     if (element.type === "ellipse") {
       // For ellipse, test points at the extremes (top, right, bottom, left)
