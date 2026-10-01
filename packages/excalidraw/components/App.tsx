@@ -3133,7 +3133,9 @@ class App extends React.Component<AppProps, AppState> {
               })
               .map((element) => element.id),
           );
-          this.updateScene({
+          // excalidraw-web: as an action result, so the host can revise what
+          // follows from the color (see `reviseActionElements`)
+          this.syncActionResult({
             elements: this.scene
               .getElementsIncludingDeleted()
               .map((el) =>
@@ -3176,7 +3178,11 @@ class App extends React.Component<AppProps, AppState> {
 
     let editingTextElement: AppState["editingTextElement"] | null = null;
     if (actionResult.elements) {
-      this.scene.replaceAllElements(actionResult.elements);
+      // excalidraw-web: the host may revise what follows from the change
+      this.scene.replaceAllElements(
+        this.props.reviseActionElements?.(actionResult.elements) ??
+          actionResult.elements,
+      );
       didUpdate = true;
     }
 
@@ -5580,6 +5586,20 @@ class App extends React.Component<AppProps, AppState> {
           this.state,
         );
 
+        // excalidraw-web: the host may edit the element its own way
+        if (
+          selectedElements.length === 1 &&
+          event.key === KEYS.ENTER &&
+          !event[KEYS.CTRL_OR_CMD] &&
+          !event.shiftKey &&
+          !event.altKey &&
+          !this.state.viewModeEnabled &&
+          this.props.onElementEdit?.(selectedElements[0])
+        ) {
+          event.preventDefault();
+          return;
+        }
+
         if (
           selectedElements.length === 1 &&
           isImageElement(selectedElements[0]) &&
@@ -5791,6 +5811,19 @@ class App extends React.Component<AppProps, AppState> {
 
           event.stopPropagation();
 
+          return;
+        }
+
+        // excalidraw-web: the host's custom tools have letters too
+        const customTool = this.props.customTools?.find(
+          (tool) => tool.key === event.key,
+        );
+        if (customTool && !event.shiftKey) {
+          this.setActiveTool({
+            type: "custom",
+            customType: customTool.customType,
+          });
+          event.stopPropagation();
           return;
         } else if (event.key === KEYS.Q) {
           this.toggleLock("keyboard");
@@ -7209,6 +7242,10 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   private startImageCropping = (image: ExcalidrawImageElement) => {
+    // excalidraw-web: the host may refuse cropping an image
+    if (this.props.isImageCroppable?.(image) === false) {
+      return;
+    }
     this.store.scheduleCapture();
     this.setState({
       croppingElementId: image.id,
@@ -7376,7 +7413,22 @@ class App extends React.Component<AppProps, AppState> {
       }
     }
 
-    if (selectedElements.length === 1 && isImageElement(selectedElements[0])) {
+    // excalidraw-web: the host may edit the element its own way, given the
+    // element hit, not the selection: a double-tap clears it first
+    if (!this.state.viewModeEnabled && this.props.onElementEdit) {
+      const editedElement = this.getElementAtPosition(sceneX, sceneY);
+      if (editedElement && this.props.onElementEdit(editedElement)) {
+        return;
+      }
+    }
+
+    if (
+      selectedElements.length === 1 &&
+      isImageElement(selectedElements[0]) &&
+      // excalidraw-web: an image the host refuses to crop leaves the
+      // double-click to the rest, such as making text
+      this.props.isImageCroppable?.(selectedElements[0]) !== false
+    ) {
       this.startImageCropping(selectedElements[0]);
       return;
     }

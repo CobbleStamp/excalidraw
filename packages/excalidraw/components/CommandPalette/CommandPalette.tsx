@@ -468,7 +468,7 @@ function CommandPaletteInner({
             const selectedElements = getSelectedElements(elements, appState);
             return (
               selectedElements.length > 0 &&
-              canChangeStrokeColor(appState, selectedElements)
+              canChangeStrokeColor(appState, selectedElements, app)
             );
           },
           perform: () => {

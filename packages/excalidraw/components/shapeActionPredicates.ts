@@ -41,6 +41,7 @@ import type { AppClassProperties, UIAppState } from "../types";
 export const canChangeStrokeColor = (
   appState: UIAppState,
   targetElements: ExcalidrawElement[],
+  app: AppClassProperties,
 ) => {
   let commonSelectedType: ExcalidrawElementType | null =
     targetElements[0]?.type || null;
@@ -57,9 +58,17 @@ export const canChangeStrokeColor = (
       commonSelectedType !== "image" &&
       commonSelectedType !== "frame" &&
       commonSelectedType !== "magicframe") ||
-    targetElements.some((element) => hasStrokeColor(element.type))
+    targetElements.some((element) => takesStrokeColor(element, app))
   );
 };
+
+/** excalidraw-web: whether an element takes a stroke colour: by its type, or as the host says. */
+export const takesStrokeColor = (
+  element: ExcalidrawElement,
+  app: AppClassProperties,
+): boolean =>
+  hasStrokeColor(element.type) ||
+  app.props.takesStrokeColor?.(element) === true;
 
 export const canChangeBackgroundColor = (
   appState: UIAppState,
@@ -121,7 +130,7 @@ export const getShapeActionPredicates = (
     showExtraActions: hasSelection && !isEditingTextOrNewElement,
 
     // color
-    strokeColor: canChangeStrokeColor(appState, targetElements),
+    strokeColor: canChangeStrokeColor(appState, targetElements, app),
     backgroundColor: canChangeBackgroundColor(
       appState,
       targetElements,
@@ -180,7 +189,9 @@ export const getShapeActionPredicates = (
     cropEditor:
       !appState.croppingElementId &&
       singleSelected &&
-      isImageElement(targetElements[0]),
+      isImageElement(targetElements[0]) &&
+      // excalidraw-web: the host may refuse cropping an image
+      app.props.isImageCroppable?.(targetElements[0]) !== false,
     lineEditor:
       !appState.selectedLinearElement?.isEditing &&
       singleSelected &&

@@ -37,7 +37,9 @@ export const actionToggleCropEditor = register({
     if (
       !appState.croppingElementId &&
       selectedElements.length === 1 &&
-      isImageElement(selectedElements[0])
+      isImageElement(selectedElements[0]) &&
+      // excalidraw-web: the host may refuse cropping an image
+      app.props.isImageCroppable?.(selectedElements[0]) !== false
     ) {
       return true;
     }

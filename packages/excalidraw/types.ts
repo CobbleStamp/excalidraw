@@ -35,6 +35,7 @@ import type {
   ExcalidrawNonSelectionElement,
   BindMode,
   ExcalidrawTextElement,
+  ExcalidrawImageElement,
   StrokeVariability,
 } from "@excalidraw/element/types";
 
@@ -1090,7 +1091,44 @@ export interface ExcalidrawProps {
    * editor asks whenever the canvas isn't empty.
    */
   shouldConfirmReplacingScene?: () => boolean;
+  /**
+   * Tools the host adds to the "more tools" menu. Choosing one, or pressing
+   * its key, makes it the active custom tool; what it does on the canvas is
+   * the host's, through `onPointerDown`.
+   */
+  customTools?: readonly CustomTool[];
+  /**
+   * Called with the element under a double-click or double-tap, or the one
+   * selected when Enter is pressed, outside view mode. Returning `true`
+   * replaces the editor's own response, such as cropping or editing text.
+   */
+  onElementEdit?: (element: NonDeletedExcalidrawElement) => boolean;
+  /** Whether an image may be cropped; an image answered `false` offers no Crop. */
+  isImageCroppable?: (element: ExcalidrawImageElement) => boolean;
+  /**
+   * Whether an element whose type has no stroke colour takes one: it then
+   * shows the stroke colour picker, and picking a colour changes it.
+   */
+  takesStrokeColor?: (element: ExcalidrawElement) => boolean;
+  /**
+   * Given the elements an action leaves, before they are kept, returns them
+   * with any property that follows from others brought in line, so it
+   * changes in the same undo step. Elements left alone must be returned as
+   * the same objects.
+   */
+  reviseActionElements?: (
+    elements: readonly ExcalidrawElement[],
+  ) => readonly ExcalidrawElement[];
 }
+
+/** A tool the host adds to the "more tools" menu, as the active custom tool `customType`. */
+export type CustomTool = {
+  customType: string;
+  label: string;
+  icon: JSX.Element;
+  /** a lowercase letter that chooses the tool, as built-in tools' letters do */
+  key?: string;
+};
 
 export type SceneFileEvent = {
   type: "opened" | "saved";

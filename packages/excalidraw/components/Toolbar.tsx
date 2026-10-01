@@ -7,6 +7,7 @@ import { useTunnels } from "../context/tunnels";
 import { t } from "../i18n";
 
 import { useEditorInterface, useStylesPanelMode } from "./App";
+import { CustomToolItems, getActiveCustomTool } from "./CustomToolItems";
 import { HintViewer } from "./HintViewer";
 import { Island } from "./Island";
 import { LockButton } from "./LockButton";
@@ -77,6 +78,7 @@ const ExtraToolsDropdown = ({
     activeTool.type === "lasso" &&
     app.state.preferredSelectionTool.type !== "lasso";
   const embeddableToolSelected = activeTool.type === "embeddable";
+  const activeCustomTool = getActiveCustomTool(app, activeTool);
 
   return (
     <DropdownMenu open={isExtraToolsMenuOpen}>
@@ -89,6 +91,7 @@ const ExtraToolsDropdown = ({
             (isFullStylesPanel && drawShapeToolSelected) ||
             lassoToolSelected ||
             bucketFillToolSelected ||
+            activeCustomTool !== undefined ||
             // in collab we're already highlighting the laser button
             // outside toolbar, so let's not highlight extra-tools button
             // on top of it
@@ -114,6 +117,8 @@ const ExtraToolsDropdown = ({
           ? LassoIcon
           : bucketFillToolSelected
           ? bucketFillIcon
+          : activeCustomTool
+          ? activeCustomTool.icon
           : DotsIcon}
       </DropdownMenu.Trigger>
       <DropdownMenu.Content
@@ -193,6 +198,8 @@ const ExtraToolsDropdown = ({
             {t("toolBar.lasso")}
           </DropdownMenu.Item>
         )}
+        {/* excalidraw-web: the host's custom tools */}
+        <CustomToolItems app={app} activeTool={activeTool} />
         <div style={{ margin: "6px 0", fontSize: 14, fontWeight: 600 }}>
           Generate
         </div>
