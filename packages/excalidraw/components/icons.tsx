@@ -348,6 +348,16 @@ export const DiamondIcon = createIcon(
   tablerIconProps,
 );
 
+// a hexagon, flat on top and bottom like the polygons the tool draws
+export const PolygonIcon = createIcon(
+  <g strokeWidth="1.5">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M7.5 4.2h9l4.5 7.8l-4.5 7.8h-9l-4.5 -7.8z" />
+  </g>,
+
+  tablerIconProps,
+);
+
 // tabler-icons: circle
 export const EllipseIcon = createIcon(
   <g strokeWidth="1.5">

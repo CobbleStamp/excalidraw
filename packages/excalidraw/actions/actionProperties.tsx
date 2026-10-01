@@ -22,6 +22,8 @@ import {
   getStrokeWidthByKey,
   reduceToCommonValue,
   invariant,
+  POLYGON_MAX_SIDES,
+  POLYGON_MIN_SIDES,
   FONT_SIZES,
   type StrokeWidthKey,
 } from "@excalidraw/common";
@@ -37,6 +39,8 @@ import {
 import {
   bindBindingElement,
   calculateFixedPointForElbowArrowBinding,
+  reanchorBindingsToOutline,
+  updateBindings,
   updateBoundElements,
 } from "@excalidraw/element";
 
@@ -58,6 +62,7 @@ import {
   isElbowArrow,
   isLinearElement,
   isLineElement,
+  isPolygonElement,
   isStickyNoteElement,
   isTextElement,
   isUsingAdaptiveRadius,
@@ -1823,6 +1828,61 @@ export const actionChangeRoundness = register<"sharp" | "round">({
           {renderAction("togglePolygon")}
         </div>
       </fieldset>
+    );
+  },
+});
+
+export const actionChangePolygonSides = register<number>({
+  name: "changePolygonSides",
+  label: "labels.polygonSides",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    const nextElements = changeProperty(elements, appState, (el) =>
+      isPolygonElement(el) ? newElementWith(el, { sides: value }) : el,
+    );
+    // a polygon's text area depends on its corners, so text inside is fitted
+    // again (growing the polygon if it no longer fits), and attached lines
+    // move onto its new outline
+    const nextElementsMap = arrayToMap(nextElements);
+    nextElements.forEach((element, index) => {
+      if (isPolygonElement(element) && element !== elements[index]) {
+        const boundText = getBoundTextElement(element, nextElementsMap);
+        if (boundText) {
+          redrawTextBoundingBox(boundText, element, app.scene);
+        }
+        // changed elements are selected, so not deleted
+        const polygon = element as NonDeleted<typeof element>;
+        reanchorBindingsToOutline(polygon, app.scene, app.state.zoom);
+        updateBindings(polygon, app.scene, app.state);
+      }
+    });
+    return {
+      elements: nextElements,
+      appState: { ...appState, currentItemPolygonSides: value },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, app, updateData }) => {
+    const sides = getFormValue(
+      elements,
+      app,
+      (element) => (isPolygonElement(element) ? element.sides : null),
+      isPolygonElement,
+      (hasSelection) =>
+        hasSelection ? null : appState.currentItemPolygonSides,
+    );
+
+    return (
+      <Range
+        label={t("labels.polygonSides")}
+        value={sides ?? appState.currentItemPolygonSides}
+        hasCommonValue={sides !== null}
+        onChange={updateData}
+        min={POLYGON_MIN_SIDES}
+        max={POLYGON_MAX_SIDES}
+        step={1}
+        testId="polygon-sides"
+      />
     );
   },
 });

@@ -30,6 +30,7 @@ import type {
   ExcalidrawFlowchartNodeElement,
   ExcalidrawLinearElementSubType,
   ExcalidrawStickyNoteElement,
+  ExcalidrawPolygonElement,
 } from "./types";
 
 export const isInitializedImageElement = <T extends ExcalidrawElement>(
@@ -68,6 +69,12 @@ export const isTextElement = <T extends ExcalidrawElement>(
   element: T | null,
 ): element is T & ExcalidrawTextElement => {
   return element != null && element.type === "text";
+};
+
+export const isPolygonElement = <T extends ExcalidrawElement>(
+  element: T | null | undefined,
+): element is T & ExcalidrawPolygonElement => {
+  return element != null && element.type === "polygon";
 };
 
 export const isStickyNoteElement = <T extends ExcalidrawElement>(
@@ -194,6 +201,7 @@ export const isBindableElement = <T extends ExcalidrawElement>(
     (element.type === "rectangle" ||
       element.type === "stickynote" ||
       element.type === "diamond" ||
+      element.type === "polygon" ||
       element.type === "ellipse" ||
       element.type === "image" ||
       element.type === "iframe" ||
@@ -250,6 +258,7 @@ export const isTextBindableContainer = <T extends ExcalidrawElement>(
     (element.type === "rectangle" ||
       element.type === "stickynote" ||
       element.type === "diamond" ||
+      element.type === "polygon" ||
       element.type === "ellipse" ||
       isArrowElement(element))
   );
@@ -265,6 +274,7 @@ export const isExcalidrawElement = (
   switch (type) {
     case "text":
     case "diamond":
+    case "polygon":
     case "rectangle":
     case "stickynote":
     case "iframe":
@@ -293,7 +303,8 @@ export const isFlowchartNodeElement = <T extends ExcalidrawElement>(
     element.type === "rectangle" ||
     element.type === "stickynote" ||
     element.type === "ellipse" ||
-    element.type === "diamond"
+    element.type === "diamond" ||
+    element.type === "polygon"
   );
 };
 
@@ -324,6 +335,7 @@ export const isArrowBoundToElement = (element: ExcalidrawArrowElement) => {
 
 export const isUsingAdaptiveRadius = (type: string) =>
   type === "rectangle" ||
+  type === "polygon" ||
   type === "embeddable" ||
   type === "iframe" ||
   type === "image";
@@ -418,6 +430,7 @@ export const isEligibleFrameChildType = (type: ElementOrToolType) => {
     case "rectangle":
     case "stickynote":
     case "diamond":
+    case "polygon":
     case "ellipse":
     case "arrow":
     case "line":

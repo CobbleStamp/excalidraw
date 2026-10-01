@@ -43,6 +43,7 @@ import {
   isValidPolygon,
   projectFixedPointOntoDiagonal,
   isNonDeletedElement,
+  normalizePolygonSides,
 } from "@excalidraw/element";
 import { normalizeFixedPoint } from "@excalidraw/element";
 import {
@@ -228,6 +229,7 @@ export const AllowedExcalidrawActiveTools: Record<
   text: true,
   rectangle: true,
   diamond: true,
+  polygon: true,
   ellipse: true,
   line: true,
   image: true,
@@ -749,6 +751,10 @@ export const restoreElement = (
     case "iframe":
     case "embeddable":
       return restoreElementWithProperties(element, {});
+    case "polygon":
+      return restoreElementWithProperties(element, {
+        sides: normalizePolygonSides(element.sides),
+      });
     case "stickynote":
       return normalizeStickyNote(
         restoreElementWithProperties(element, {
@@ -1406,6 +1412,9 @@ export const restoreAppState = (
     ),
     currentItemStickynoteBackgroundColor: normalizeStickyNoteBackgroundColor(
       nextAppState.currentItemStickynoteBackgroundColor,
+    ),
+    currentItemPolygonSides: normalizePolygonSides(
+      nextAppState.currentItemPolygonSides,
     ),
     editingFrame: null,
   };

@@ -23,6 +23,7 @@ import {
   newLinearElement,
   newMagicFrameElement,
   newStickyNoteElement,
+  newPolygonElement,
   newTextElement,
 } from "@excalidraw/element";
 
@@ -45,6 +46,7 @@ import type {
   ExcalidrawElbowArrowElement,
   ExcalidrawArrowElement,
   ExcalidrawStickyNoteElement,
+  ExcalidrawPolygonElement,
   FixedSegment,
   NonDeleted,
   NonDeletedExcalidrawElement,
@@ -215,6 +217,7 @@ export class API {
       : never;
     points?: T extends "arrow" | "line" | "freedraw" ? readonly LocalPoint[] : never;
     polygon?: T extends "line" ? boolean : never;
+    sides?: T extends "polygon" ? number : never;
     strokeOptions?: T extends "freedraw"
       ? ExcalidrawFreeDrawElement["strokeOptions"]
       : never;
@@ -251,6 +254,8 @@ export class API {
       ? ExcalidrawMagicFrameElement
       : T extends "stickynote"
       ? ExcalidrawStickyNoteElement
+      : T extends "polygon"
+      ? ExcalidrawPolygonElement
       : ExcalidrawGenericElement
   > => {
     let element: Mutable<ExcalidrawElement> = null!;
@@ -327,6 +332,13 @@ export class API {
         element = newIframeElement({
           type: "iframe",
           ...base,
+        });
+        break;
+      case "polygon":
+        element = newPolygonElement({
+          ...base,
+          type,
+          sides: rest.sides,
         });
         break;
       case "stickynote":

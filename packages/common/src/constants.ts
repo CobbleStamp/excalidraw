@@ -255,6 +255,11 @@ export const STICKY_NOTE_FOOTER = {
 export const STICKY_NOTE_BODY_INSET_Y =
   STICKY_NOTE_PADDING * 2 + STICKY_NOTE_FOOTER.height;
 export const DEFAULT_STICKY_NOTE_SIZE = 250;
+
+/** The corner counts a polygon can have, and the one the tool starts with */
+export const POLYGON_MIN_SIDES = 3;
+export const POLYGON_MAX_SIDES = 12;
+export const DEFAULT_POLYGON_SIDES = 6;
 // floor for a finalized note's width and base height; the UI floor is font-aware
 // on top of it (see `getStickyNoteMinSize`)
 export const STICKY_NOTE_MIN_SIZE = 75;
@@ -548,6 +553,7 @@ export const TOOL_TYPE = {
   lasso: "lasso",
   rectangle: "rectangle",
   diamond: "diamond",
+  polygon: "polygon",
   ellipse: "ellipse",
   arrow: "arrow",
   line: "line",

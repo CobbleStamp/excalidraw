@@ -42,6 +42,7 @@
     "pressure_constant": "Constant",
     "pressure_variable": "Variable",
     "opacity": "Opacity",
+    "polygonSides": "Corners",
     "textAlign": "Text align",
     "edges": "Edges",
     "sharp": "Sharp",
@@ -326,6 +327,7 @@
     "image": "Insert image",
     "rectangle": "Rectangle",
     "diamond": "Diamond",
+    "polygon": "Polygon",
     "ellipse": "Ellipse",
     "arrow": "Arrow",
     "line": "Line",
@@ -355,6 +357,7 @@
   "element": {
     "rectangle": "Rectangle",
     "diamond": "Diamond",
+    "polygon": "Polygon",
     "ellipse": "Ellipse",
     "arrow": "Arrow",
     "line": "Line",

@@ -348,7 +348,7 @@ export const textWysiwyg = ({
           if (!isArrowElement(container) && height > maxHeight) {
             const targetContainerHeight = computeContainerDimensionForBoundText(
               height,
-              container.type,
+              container,
             );
 
             app.scene.mutateElement(container, {
@@ -365,7 +365,7 @@ export const textWysiwyg = ({
           ) {
             const targetContainerHeight = computeContainerDimensionForBoundText(
               height,
-              container.type,
+              container,
             );
             app.scene.mutateElement(container, {
               height: targetContainerHeight,

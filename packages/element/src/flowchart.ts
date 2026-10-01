@@ -29,6 +29,7 @@ import {
   newArrowElement,
   newElement,
   newStickyNoteElement,
+  newPolygonElement,
 } from "./newElement";
 import { aabbForElement } from "./bounds";
 import { elementsAreInFrameBounds, elementOverlapsWithFrame } from "./frame";
@@ -255,6 +256,12 @@ const cloneFlowchartNode = (
           type: "stickynote",
           ...commonNodeProps,
           baseHeight: template.baseHeight,
+        })
+      : template.type === "polygon"
+      ? newPolygonElement({
+          type: "polygon",
+          ...commonNodeProps,
+          sides: template.sides,
         })
       : newElement({
           type: template.type,

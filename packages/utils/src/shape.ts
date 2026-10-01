@@ -34,7 +34,10 @@ import {
   type LocalPoint,
 } from "@excalidraw/math";
 
-import { getElementAbsoluteCoords } from "@excalidraw/element";
+import {
+  getElementAbsoluteCoords,
+  getPolygonPoints,
+} from "@excalidraw/element";
 
 import type {
   ElementsMap,
@@ -48,6 +51,7 @@ import type {
   ExcalidrawIframeElement,
   ExcalidrawImageElement,
   ExcalidrawLinearElement,
+  ExcalidrawPolygonElement,
   ExcalidrawRectangleElement,
   ExcalidrawSelectionElement,
   ExcalidrawStickyNoteElement,
@@ -107,6 +111,7 @@ type RectangularElement =
   | ExcalidrawRectangleElement
   | ExcalidrawStickyNoteElement
   | ExcalidrawDiamondElement
+  | ExcalidrawPolygonElement
   | ExcalidrawFrameLikeElement
   | ExcalidrawEmbeddableElement
   | ExcalidrawImageElement
@@ -133,6 +138,12 @@ export const getPolygonShape = <Point extends GlobalPoint | LocalPoint>(
       pointRotateRads(pointFrom(x + width, cy), center, angle),
       pointRotateRads(pointFrom(cx, y + height), center, angle),
       pointRotateRads(pointFrom(x, cy), center, angle),
+    );
+  } else if (element.type === "polygon") {
+    data = polygon(
+      ...getPolygonPoints(element).map(([px, py]) =>
+        pointRotateRads(pointFrom<Point>(x + px, y + py), center, angle),
+      ),
     );
   } else {
     data = polygon(

@@ -74,6 +74,7 @@ export type ActionName =
   | "changeArrowType"
   | "changeArrowProperties"
   | "changeOpacity"
+  | "changePolygonSides"
   | "changeFontSize"
   | "undo"
   | "redo"

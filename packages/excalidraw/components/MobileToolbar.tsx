@@ -50,7 +50,7 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
   const activeTool = app.state.activeTool;
   const [isOtherShapesMenuOpen, setIsOtherShapesMenuOpen] = useState(false);
   const [lastActiveGenericShape, setLastActiveGenericShape] = useState<
-    "rectangle" | "diamond" | "ellipse"
+    "rectangle" | "diamond" | "polygon" | "ellipse"
   >("rectangle");
   const [lastActiveLinearElement, setLastActiveLinearElement] = useState<
     "arrow" | "line"
@@ -61,6 +61,7 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
     if (
       activeTool.type === "rectangle" ||
       activeTool.type === "diamond" ||
+      activeTool.type === "polygon" ||
       activeTool.type === "ellipse"
     ) {
       setLastActiveGenericShape(activeTool.type);
@@ -83,14 +84,14 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
 
   const { TTDDialogTriggerTunnel } = useTunnels();
 
-  const SHAPE_TOOLS = (["rectangle", "diamond", "ellipse"] as const).map(
-    (type) => ({
-      type,
-      icon: TOOLS[type].icon,
-      title: capitalizeString(t(`toolBar.${type}`)),
-      fillable: TOOLS[type].fillable,
-    }),
-  );
+  const SHAPE_TOOLS = (
+    ["rectangle", "diamond", "polygon", "ellipse"] as const
+  ).map((type) => ({
+    type,
+    icon: TOOLS[type].icon,
+    title: capitalizeString(t(`toolBar.${type}`)),
+    fillable: TOOLS[type].fillable,
+  }));
 
   const LINEAR_ELEMENT_TOOLS = (["arrow", "line"] as const).map((type) => ({
     type,
@@ -187,6 +188,7 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
           if (
             type === "rectangle" ||
             type === "diamond" ||
+            type === "polygon" ||
             type === "ellipse"
           ) {
             setLastActiveGenericShape(type);

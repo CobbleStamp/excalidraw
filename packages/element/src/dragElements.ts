@@ -21,11 +21,13 @@ import { getContainedElements } from "./containment";
 import { getPerfectElementSize } from "./sizeHelpers";
 import { getBoundTextElement } from "./textElement";
 import { getMinTextElementWidth } from "./textMeasurements";
+import { getRegularPolygonAspectRatio } from "./polygon";
 import {
   isBindingElement,
   isElbowArrow,
   isFrameLikeElement,
   isImageElement,
+  isPolygonElement,
   isTextElement,
 } from "./typeChecks";
 
@@ -388,6 +390,15 @@ export const dragNewElement = ({
   if (shouldMaintainAspectRatio && newElement.type !== "selection") {
     if (widthAspectRatio) {
       height = width / widthAspectRatio;
+    } else if (isPolygonElement(newElement)) {
+      // equal sides: the box takes the regular polygon's proportions, sized
+      // by whichever way the cursor has moved further
+      const ratio = getRegularPolygonAspectRatio(newElement.sides);
+      if (Math.abs(y - originY) > Math.abs(x - originX)) {
+        width = height * ratio;
+      } else {
+        height = width / ratio;
+      }
     } else {
       // Depending on where the cursor is at (x, y) relative to where the starting point is
       // (originX, originY), we use ONLY width or height to control size increase.

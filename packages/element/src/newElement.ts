@@ -24,6 +24,7 @@ import {
   getResizedElementAbsoluteCoords,
 } from "./bounds";
 import { newElementWith } from "./mutateElement";
+import { normalizePolygonSides } from "./polygon";
 import {
   normalizeStickyNoteBackgroundColor,
   normalizeStickyNoteStrokeColor,
@@ -56,6 +57,7 @@ import type {
   ExcalidrawElbowArrowElement,
   ExcalidrawLineElement,
   ExcalidrawStickyNoteElement,
+  ExcalidrawPolygonElement,
 } from "./types";
 
 export type ElementConstructorOpts = MarkOptional<
@@ -241,6 +243,16 @@ export const newStickyNoteElement = (
     baseHeight: opts.baseHeight ?? base.height,
   });
 };
+
+export const newPolygonElement = (
+  opts: {
+    type: "polygon";
+    sides?: number;
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawPolygonElement> => ({
+  ..._newElementBase<ExcalidrawPolygonElement>("polygon", opts),
+  sides: normalizePolygonSides(opts.sides),
+});
 
 export const newEmbeddableElement = (
   opts: {

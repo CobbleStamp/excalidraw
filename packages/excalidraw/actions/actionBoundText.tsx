@@ -301,14 +301,12 @@ export const actionWrapTextInContainer = register({
           locked: false,
           x: textElement.x - BOUND_TEXT_PADDING,
           y: textElement.y - BOUND_TEXT_PADDING,
-          width: computeContainerDimensionForBoundText(
-            textElement.width,
-            "rectangle",
-          ),
-          height: computeContainerDimensionForBoundText(
-            textElement.height,
-            "rectangle",
-          ),
+          width: computeContainerDimensionForBoundText(textElement.width, {
+            type: "rectangle",
+          }),
+          height: computeContainerDimensionForBoundText(textElement.height, {
+            type: "rectangle",
+          }),
           groupIds: textElement.groupIds,
           frameId: textElement.frameId,
         });

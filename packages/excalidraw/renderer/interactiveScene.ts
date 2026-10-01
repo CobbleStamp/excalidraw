@@ -24,6 +24,7 @@ import {
 
 import {
   deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructRectanguloidElement,
   elementCenterPoint,
   getAllMidpoints,
@@ -386,10 +387,12 @@ const renderBindingHighlightForBindableElement_simple = (
           context.stroke();
           break;
         case "diamond":
+        case "polygon":
           {
-            const [segments, curves] = deconstructDiamondElement(
-              suggestedBinding.element,
-            );
+            const [segments, curves] =
+              suggestedBinding.element.type === "polygon"
+                ? deconstructPolygonElement(suggestedBinding.element)
+                : deconstructDiamondElement(suggestedBinding.element);
 
             // Draw each line segment individually
             segments.forEach((segment) => {
@@ -665,11 +668,12 @@ const renderBindingHighlightForBindableElement_complex = (
           context.stroke();
           break;
         case "diamond":
+        case "polygon":
           {
-            const [segments, curves] = deconstructDiamondElement(
-              element,
-              offset,
-            );
+            const [segments, curves] =
+              element.type === "polygon"
+                ? deconstructPolygonElement(element, offset)
+                : deconstructDiamondElement(element, offset);
 
             // Draw each line segment individually
             segments.forEach((segment) => {
@@ -836,6 +840,11 @@ const renderBindingHighlightForBindableElement_complex = (
             y: rotatedPoint[1] - element.y,
           };
         });
+      } else if (element.type === "polygon") {
+        midpoints = getAllMidpoints(element, allElementsMap).map(([x, y]) => ({
+          x: x - element.x,
+          y: y - element.y,
+        }));
       } else {
         const center = elementCenterPoint(element, allElementsMap);
         const basePoints = [
