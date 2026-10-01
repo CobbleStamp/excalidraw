@@ -1124,6 +1124,11 @@ export interface ExcalidrawProps {
    * change what is exported: the preview, PNG, SVG and the clipboard.
    */
   imageExportOptions?: readonly ImageExportOption[];
+  /**
+   * excalidraw-web: the host's own sections of the library panel, shown
+   * above the library's items while it is not being searched.
+   */
+  librarySections?: React.ReactNode;
 }
 
 /**

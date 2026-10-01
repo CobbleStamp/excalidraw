@@ -32,7 +32,8 @@ import "./LibraryMenuItems.scss";
 
 import { TextField } from "./TextField";
 
-import { useEditorInterface } from "./App";
+// excalidraw-web: the host's own sections, above the library's items
+import { useAppProps, useEditorInterface } from "./App";
 
 import { Button } from "./Button";
 
@@ -259,8 +260,13 @@ export default function LibraryMenuItems({
     });
   }, []);
 
+  // excalidraw-web: the host's own sections, above the library's items
+  const { librarySections } = useAppProps();
+
   const JSX_whenNotSearching = !IS_SEARCHING && (
     <>
+      {/* excalidraw-web: the host's own sections, above the library's items */}
+      {librarySections}
       {!IS_LIBRARY_EMPTY && (
         <div className="library-menu-items-container__header">
           {t("labels.personalLib")}

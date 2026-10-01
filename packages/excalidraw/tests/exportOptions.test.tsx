@@ -1,6 +1,7 @@
 /**
  * The host's export options: switches in the image export dialog that change
- * what is exported, and exporting exactly a rectangle of the scene.
+ * what is exported, and exporting exactly a rectangle of the scene; and the
+ * host's own sections of the library panel.
  */
 import React from "react";
 
@@ -8,6 +9,7 @@ import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";
 import { exportToCanvas } from "../scene/export";
+import { DEFAULT_SIDEBAR, LIBRARY_SIDEBAR_TAB } from "@excalidraw/common";
 import { getDefaultAppState } from "../appState";
 
 import { API } from "./helpers/api";
@@ -114,5 +116,27 @@ describe("exporting a rectangle of the scene", () => {
     );
     expect(createCanvas).toHaveBeenCalledWith(300, 150);
     expect([canvas.width, canvas.height]).toEqual([300, 150]);
+  });
+});
+
+describe("the host's library sections", () => {
+  it("shows them above the library's items", async () => {
+    await render(
+      <Excalidraw
+        librarySections={<section data-testid="host-section">Kinds</section>}
+      />,
+    );
+    act(() => {
+      h.setState({
+        openSidebar: { name: DEFAULT_SIDEBAR.name, tab: LIBRARY_SIDEBAR_TAB },
+      });
+    });
+    await waitFor(() =>
+      expect(
+        document.querySelector(
+          ".library-menu-items-container [data-testid='host-section']",
+        ),
+      ).not.toBeNull(),
+    );
   });
 });

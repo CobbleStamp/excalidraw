@@ -75,6 +75,8 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     takesStrokeColor,
     reviseActionElements,
     imageExportOptions,
+    // excalidraw-web: the host's own sections of the library panel
+    librarySections,
     className,
     ownerDocument = document,
     onChange,
@@ -225,6 +227,8 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           takesStrokeColor={takesStrokeColor}
           reviseActionElements={reviseActionElements}
           imageExportOptions={imageExportOptions}
+          // excalidraw-web: the host's own sections of the library panel
+          librarySections={librarySections}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}
