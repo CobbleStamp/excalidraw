@@ -172,7 +172,12 @@ const getHints = ({
     });
   }
 
-  if (selectedElements.length === 1 && isImageElement(selectedElements[0])) {
+  if (
+    selectedElements.length === 1 &&
+    isImageElement(selectedElements[0]) &&
+    // excalidraw-web: no crop hint for an image the host refuses to crop
+    app.props.isImageCroppable?.(selectedElements[0]) !== false
+  ) {
     return t("hints.enterCropEditor", {
       shortcut: getTaggedShortcutKey("Enter"),
     });

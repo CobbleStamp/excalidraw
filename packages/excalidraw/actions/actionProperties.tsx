@@ -72,7 +72,6 @@ import {
   getColorTargetElement,
   getColorUpdate,
   hasFillStyle,
-  hasStrokeColor,
 } from "@excalidraw/element";
 
 import {
@@ -112,6 +111,7 @@ import { ColorPicker } from "../components/ColorPicker/ColorPicker";
 import { FontPicker } from "../components/FontPicker/FontPicker";
 import { IconPicker } from "../components/IconPicker";
 import { Range } from "../components/Range";
+import { takesStrokeColor } from "../components/shapeActionPredicates";
 import {
   ArrowheadArrowIcon,
   ArrowheadBarIcon,
@@ -366,7 +366,7 @@ export const actionChangeStrokeColor = register<
   name: "changeStrokeColor",
   label: "labels.stroke",
   trackEvent: false,
-  perform: (elements, appState, value) => {
+  perform: (elements, appState, value, app) => {
     const { color, ...appStateUpdates } = value ?? {};
     if (color === undefined) {
       return {
@@ -386,8 +386,9 @@ export const actionChangeStrokeColor = register<
         changeProperty(
           elements,
           appState,
+          // excalidraw-web: and the elements the host gives a stroke colour
           (el) =>
-            hasStrokeColor(el.type)
+            takesStrokeColor(el, app)
               ? newElementWith(
                   el,
                   getColorUpdate(el, "strokeColor", color, elementsMap),

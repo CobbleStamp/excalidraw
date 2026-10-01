@@ -69,6 +69,11 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     onExport,
     onSceneFileEvent,
     shouldConfirmReplacingScene,
+    customTools,
+    onElementEdit,
+    isImageCroppable,
+    takesStrokeColor,
+    reviseActionElements,
     className,
     ownerDocument = document,
     onChange,
@@ -213,6 +218,11 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           onExport={onExport}
           onSceneFileEvent={onSceneFileEvent}
           shouldConfirmReplacingScene={shouldConfirmReplacingScene}
+          customTools={customTools}
+          onElementEdit={onElementEdit}
+          isImageCroppable={isImageCroppable}
+          takesStrokeColor={takesStrokeColor}
+          reviseActionElements={reviseActionElements}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

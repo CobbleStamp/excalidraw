@@ -9,6 +9,7 @@ import { useTunnels } from "../context/tunnels";
 
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import { ToolPopover } from "./ToolPopover";
+import { CustomToolItems, getActiveCustomTool } from "./CustomToolItems";
 import {
   EraserToolButton,
   FrameToolButton,
@@ -133,8 +134,12 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
     }
     return true;
   });
-  const extraToolSelected = extraTools.includes(activeTool.type);
-  const extraIcon = extraToolSelected
+  const activeCustomTool = getActiveCustomTool(app, activeTool);
+  const extraToolSelected =
+    extraTools.includes(activeTool.type) || activeCustomTool !== undefined;
+  const extraIcon = activeCustomTool
+    ? activeCustomTool.icon
+    : extraToolSelected
     ? activeTool.type === "text"
       ? TextIcon
       : activeTool.type === "image"
@@ -347,6 +352,8 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
           >
             {t("toolBar.bucketfill")}
           </DropdownMenu.Item>
+          {/* excalidraw-web: the host's custom tools */}
+          <CustomToolItems app={app} activeTool={activeTool} />
           <div style={{ margin: "6px 0", fontSize: 14, fontWeight: 600 }}>
             Generate
           </div>
