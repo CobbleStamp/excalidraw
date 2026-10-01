@@ -37,8 +37,14 @@ import { FilledButton } from "./FilledButton";
 import "./ImageExportDialog.scss";
 
 import type { ActionManager } from "../actions/manager";
+import type { ExportedElements } from "../data";
 
-import type { AppClassProperties, BinaryFiles, UIAppState } from "../types";
+import type {
+  AppClassProperties,
+  BinaryFiles,
+  ImageExportOption,
+  UIAppState,
+} from "../types";
 
 export const ErrorCanvasPreview = () => {
   return (
@@ -60,6 +66,7 @@ type ImageExportModalProps = {
   onExportImage: AppClassProperties["onExportImage"];
   name: string;
   exportWithDarkMode: boolean;
+  options: readonly ImageExportOption[];
 };
 
 const ImageExportModal = ({
@@ -70,6 +77,7 @@ const ImageExportModal = ({
   onExportImage,
   name,
   exportWithDarkMode,
+  options,
 }: ImageExportModalProps) => {
   const hasSelection = isSomeElementSelected(
     elementsSnapshot,
@@ -105,11 +113,32 @@ const ImageExportModal = ({
     resetCopyStatus,
   ]);
 
-  const { exportedElements, exportingFrame } = prepareElementsForExport(
+  // excalidraw-web: the host's export options, each a switch
+  const [optionsChecked, setOptionsChecked] = useState<
+    Readonly<Record<string, boolean>>
+  >(() =>
+    Object.fromEntries(
+      options.map((option) => [option.name, option.defaultChecked]),
+    ),
+  );
+
+  const prepared = prepareElementsForExport(
     elementsSnapshot,
     appStateSnapshot,
     exportSelectionOnly,
   );
+  const { exportingFrame } = prepared;
+  const shownOptions = options.filter(
+    (option) => option.appliesTo?.(prepared.exportedElements) ?? true,
+  );
+  // excalidraw-web: each option shown revises what is exported, in order
+  const exportedElements = shownOptions.reduce<
+    readonly NonDeletedExcalidrawElement[]
+  >(
+    (elements, option) =>
+      option.exportedElements(elements, optionsChecked[option.name]),
+    prepared.exportedElements,
+  ) as ExportedElements;
 
   useEffect(() => {
     const previewNode = previewRef.current;
@@ -231,6 +260,26 @@ const ImageExportModal = ({
             />
           </ExportSetting>
         )}
+        {/* excalidraw-web: the host's export options */}
+        {shownOptions.map((option) => (
+          <ExportSetting
+            key={option.name}
+            label={option.label}
+            tooltip={option.tooltip}
+            name={option.name}
+          >
+            <Switch
+              name={option.name}
+              checked={optionsChecked[option.name]}
+              onChange={(checked) => {
+                setOptionsChecked((current) => ({
+                  ...current,
+                  [option.name]: checked,
+                }));
+              }}
+            />
+          </ExportSetting>
+        ))}
         <ExportSetting
           label={t("imageExportDialog.label.withBackground")}
           name="exportBackgroundSwitch"
@@ -392,6 +441,7 @@ export const ImageExportDialog = ({
   onExportImage,
   onCloseRequest,
   name,
+  options = [],
 }: {
   appState: UIAppState;
   elements: readonly NonDeletedExcalidrawElement[];
@@ -400,6 +450,7 @@ export const ImageExportDialog = ({
   onExportImage: AppClassProperties["onExportImage"];
   onCloseRequest: () => void;
   name: string;
+  options?: readonly ImageExportOption[];
 }) => {
   // we need to take a snapshot so that the exported state can't be modified
   // while the dialog is open
@@ -420,6 +471,7 @@ export const ImageExportDialog = ({
         onExportImage={onExportImage}
         name={name}
         exportWithDarkMode={appState.exportWithDarkMode}
+        options={options}
       />
     </Dialog>
   );

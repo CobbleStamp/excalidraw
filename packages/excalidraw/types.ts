@@ -1119,7 +1119,31 @@ export interface ExcalidrawProps {
   reviseActionElements?: (
     elements: readonly ExcalidrawElement[],
   ) => readonly ExcalidrawElement[];
+  /**
+   * Switches the host adds to the image export dialog, each of which may
+   * change what is exported: the preview, PNG, SVG and the clipboard.
+   */
+  imageExportOptions?: readonly ImageExportOption[];
 }
+
+/**
+ * A switch of the host's in the image export dialog. Each export passes the
+ * elements it would export through every option shown, in order.
+ */
+export type ImageExportOption = {
+  /** unique among the options; the switch's name */
+  name: string;
+  label: string;
+  tooltip?: string;
+  defaultChecked: boolean;
+  /** whether the switch shows for the elements being exported; always when absent */
+  appliesTo?: (elements: readonly NonDeletedExcalidrawElement[]) => boolean;
+  /** the elements to export, given those being exported and the switch's state */
+  exportedElements: (
+    elements: readonly NonDeletedExcalidrawElement[],
+    checked: boolean,
+  ) => readonly NonDeletedExcalidrawElement[];
+};
 
 /** A tool the host adds to the "more tools" menu, as the active custom tool `customType`. */
 export type CustomTool = {

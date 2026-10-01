@@ -74,6 +74,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     isImageCroppable,
     takesStrokeColor,
     reviseActionElements,
+    imageExportOptions,
     className,
     ownerDocument = document,
     onChange,
@@ -223,6 +224,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           isImageCroppable={isImageCroppable}
           takesStrokeColor={takesStrokeColor}
           reviseActionElements={reviseActionElements}
+          imageExportOptions={imageExportOptions}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

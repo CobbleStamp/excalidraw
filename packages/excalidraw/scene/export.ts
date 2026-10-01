@@ -186,11 +186,23 @@ export const exportToCanvas = async (
     exportPadding = DEFAULT_EXPORT_PADDING,
     viewBackgroundColor,
     exportingFrame,
+    exportingBounds,
   }: {
     exportBackground: boolean;
     exportPadding?: number;
     viewBackgroundColor: string;
     exportingFrame?: NonDeleted<ExcalidrawFrameLikeElement> | null;
+    /**
+     * Exports exactly this rectangle of the scene, in scene coordinates,
+     * drawn as an ordinary export draws it, with no padding; ignored when
+     * exporting a frame.
+     */
+    exportingBounds?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    } | null;
   },
   createCanvas: (
     width: number,
@@ -225,14 +237,26 @@ export const exportToCanvas = async (
     frameRendering,
   });
 
-  if (exportingFrame) {
+  // excalidraw-web: a rectangle of the scene is exported without padding too
+  if (exportingFrame || exportingBounds) {
     exportPadding = 0;
   }
 
-  const [minX, minY, width, height] = getCanvasSize(
-    exportingFrame ? [exportingFrame] : getRootElements(elementsForRender),
-    exportPadding,
-  );
+  // excalidraw-web: and is exactly the canvas
+  const [minX, minY, width, height] =
+    exportingBounds && !exportingFrame
+      ? [
+          exportingBounds.x,
+          exportingBounds.y,
+          exportingBounds.width,
+          exportingBounds.height,
+        ]
+      : getCanvasSize(
+          exportingFrame
+            ? [exportingFrame]
+            : getRootElements(elementsForRender),
+          exportPadding,
+        );
 
   const { canvas, scale = 1 } = createCanvas(width, height);
 
