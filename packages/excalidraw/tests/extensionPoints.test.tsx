@@ -196,6 +196,22 @@ describe("extension points", () => {
       expect(h.state.editingTextElement).not.toBe(null);
     });
 
+    it("hints at cropping only an image it accepts", async () => {
+      const croppable = { value: true };
+      await renderEditor({ isImageCroppable: () => croppable.value });
+      const image = addImage();
+      const hint = () =>
+        h.app.ownerDocument.querySelector(".HintViewer")?.textContent ?? "";
+
+      API.setSelectedElements([image]);
+      expect(hint()).toContain("crop");
+
+      croppable.value = false;
+      API.setSelectedElements([]);
+      API.setSelectedElements([image]);
+      expect(hint()).not.toContain("crop");
+    });
+
     it("still crops an image it accepts", async () => {
       await renderEditor({ isImageCroppable: () => true });
       const image = addImage();
