@@ -161,7 +161,7 @@ const ImageExportModal = ({
 
     // excalidraw-web: the preview draws the host's files, as the export does
     const drawnFiles = prepareFiles
-      ? prepareFiles(files)
+      ? prepareFiles(files, exportedElements)
       : Promise.resolve(files);
     drawnFiles
       .then((pictureFiles) =>

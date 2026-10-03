@@ -169,7 +169,7 @@ export const exportCanvas = async (
   // excalidraw-web: the host's files are awaited inside the canvas promise,
   // which the clipboard and file picker take while the user's click lasts
   const drawnFiles = prepareFiles
-    ? prepareFiles(files)
+    ? prepareFiles(files, elements)
     : Promise.resolve(files);
   const tempCanvas = drawnFiles.then((pictureFiles) =>
     exportToCanvas(elements, appState, pictureFiles, {

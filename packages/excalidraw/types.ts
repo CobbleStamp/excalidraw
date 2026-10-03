@@ -1144,8 +1144,11 @@ export interface ExcalidrawProps {
   librarySections?: React.ReactNode;
 }
 
-/** The files a PNG export draws, given those the scene holds. */
-export type PrepareExportFiles = (files: BinaryFiles) => Promise<BinaryFiles>;
+/** The files a PNG export draws, given those the scene holds and the elements exported. */
+export type PrepareExportFiles = (
+  files: BinaryFiles,
+  elements: readonly NonDeletedExcalidrawElement[],
+) => Promise<BinaryFiles>;
 
 /**
  * A switch of the host's in the image export dialog. Each export passes the

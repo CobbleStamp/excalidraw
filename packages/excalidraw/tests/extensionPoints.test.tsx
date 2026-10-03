@@ -393,12 +393,10 @@ describe("extension points", () => {
 
   describe("hidesLinkInfo", () => {
     const selectLinkedRectangle = () => {
-      const rectangle = API.createElement({
-        type: "rectangle",
-        x: 0,
-        y: 0,
+      const rectangle = {
+        ...API.createElement({ type: "rectangle", x: 0, y: 0 }),
         link: "https://example.com",
-      });
+      };
       API.setElements([rectangle]);
       API.setSelectedElements([rectangle]);
     };

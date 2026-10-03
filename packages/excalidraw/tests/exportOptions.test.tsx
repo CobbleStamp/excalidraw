@@ -133,6 +133,7 @@ describe("the files a PNG export draws", () => {
     await waitFor(() =>
       expect(prepareExportFiles).toHaveBeenCalledWith(
         expect.objectContaining({ "file-1": expect.anything() }),
+        [expect.objectContaining({ type: "image" })],
       ),
     );
   });
@@ -146,6 +147,7 @@ describe("the files a PNG export draws", () => {
     await waitFor(() =>
       expect(prepareExportFiles).toHaveBeenCalledWith(
         expect.objectContaining({ "file-1": expect.anything() }),
+        [expect.objectContaining({ type: "image" })],
       ),
     );
   });
