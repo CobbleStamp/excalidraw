@@ -43,6 +43,7 @@ import type {
   AppClassProperties,
   BinaryFiles,
   ImageExportOption,
+  PrepareExportFiles,
   UIAppState,
 } from "../types";
 
@@ -67,6 +68,7 @@ type ImageExportModalProps = {
   name: string;
   exportWithDarkMode: boolean;
   options: readonly ImageExportOption[];
+  prepareFiles?: PrepareExportFiles;
 };
 
 const ImageExportModal = ({
@@ -78,6 +80,7 @@ const ImageExportModal = ({
   name,
   exportWithDarkMode,
   options,
+  prepareFiles,
 }: ImageExportModalProps) => {
   const hasSelection = isSomeElementSelected(
     elementsSnapshot,
@@ -156,21 +159,28 @@ const ImageExportModal = ({
       return requestId !== previewRenderRequestIdRef.current;
     };
 
-    exportToCanvas({
-      elements: exportedElements,
-      appState: {
-        ...appStateSnapshot,
-        name: projectName,
-        exportBackground: exportWithBackground,
-        exportWithDarkMode,
-        exportScale,
-        exportEmbedScene: embedScene,
-      },
-      files,
-      exportPadding: DEFAULT_EXPORT_PADDING,
-      maxWidthOrHeight: Math.max(maxWidth, maxHeight),
-      exportingFrame,
-    })
+    // excalidraw-web: the preview draws the host's files, as the export does
+    const drawnFiles = prepareFiles
+      ? prepareFiles(files)
+      : Promise.resolve(files);
+    drawnFiles
+      .then((pictureFiles) =>
+        exportToCanvas({
+          elements: exportedElements,
+          appState: {
+            ...appStateSnapshot,
+            name: projectName,
+            exportBackground: exportWithBackground,
+            exportWithDarkMode,
+            exportScale,
+            exportEmbedScene: embedScene,
+          },
+          files: pictureFiles,
+          exportPadding: DEFAULT_EXPORT_PADDING,
+          maxWidthOrHeight: Math.max(maxWidth, maxHeight),
+          exportingFrame,
+        }),
+      )
       .then(async (canvas) => {
         if (isStaleRequest()) {
           return;
@@ -209,6 +219,7 @@ const ImageExportModal = ({
   }, [
     appStateSnapshot,
     files,
+    prepareFiles,
     exportedElements,
     exportingFrame,
     projectName,
@@ -442,6 +453,7 @@ export const ImageExportDialog = ({
   onCloseRequest,
   name,
   options = [],
+  prepareFiles,
 }: {
   appState: UIAppState;
   elements: readonly NonDeletedExcalidrawElement[];
@@ -451,6 +463,7 @@ export const ImageExportDialog = ({
   onCloseRequest: () => void;
   name: string;
   options?: readonly ImageExportOption[];
+  prepareFiles?: PrepareExportFiles;
 }) => {
   // we need to take a snapshot so that the exported state can't be modified
   // while the dialog is open
@@ -472,6 +485,7 @@ export const ImageExportDialog = ({
         name={name}
         exportWithDarkMode={appState.exportWithDarkMode}
         options={options}
+        prepareFiles={prepareFiles}
       />
     </Dialog>
   );

@@ -14,13 +14,19 @@ import {
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { useUIAppState } from "../context/ui-appState";
+import { t } from "../i18n";
 import { atom } from "../editor-jotai";
 import { useCreatePortalContainer } from "../hooks/useCreatePortalContainer";
 import { useOutsideClick } from "../hooks/useOutsideClick";
 import { useStable } from "../hooks/useStable";
 import { getSelectedElements } from "../scene";
 
-import { useApp, useExcalidrawContainer, useExcalidrawElements } from "./App";
+import {
+  useApp,
+  useExcalidrawContainer,
+  useExcalidrawElements,
+  useExcalidrawSetAppState,
+} from "./App";
 import { eyeDropperIconSvgPaths } from "./icons";
 import { positionElementBesideCursor } from "./positionElementBesideCursor";
 
@@ -69,6 +75,7 @@ export const EyeDropper: React.FC<{
   const appState = useUIAppState();
   const elements = useExcalidrawElements();
   const app = useApp();
+  const setAppState = useExcalidrawSetAppState();
   const ownerWindow = app.ownerWindow;
 
   const selectedElements = getSelectedElements(elements, appState);
@@ -79,6 +86,7 @@ export const EyeDropper: React.FC<{
     onChange,
     onSelect,
     selectedElements,
+    setAppState,
   });
 
   const { container: excalidrawContainer } = useExcalidrawContainer();
@@ -103,6 +111,17 @@ export const EyeDropper: React.FC<{
     let isHoldingPointerDown = false;
 
     const ctx = app.canvas.getContext("2d")!;
+
+    // excalidraw-web: a picture from another site makes the canvas unreadable
+    try {
+      ctx.getImageData(0, 0, 1, 1);
+    } catch {
+      stableProps.setAppState({
+        toast: { message: t("errors.eyeDropperCanvasUnreadable") },
+      });
+      stableProps.onCancel();
+      return;
+    }
 
     const getCurrentColor = ({
       clientX,

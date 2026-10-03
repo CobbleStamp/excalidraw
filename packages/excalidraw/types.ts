@@ -1125,11 +1125,27 @@ export interface ExcalidrawProps {
    */
   imageExportOptions?: readonly ImageExportOption[];
   /**
+   * excalidraw-web: given the files a PNG export draws, returns those to draw
+   * instead, as with pictures the canvas could not otherwise export. Used by
+   * every PNG export, Copy as PNG and the export dialog's preview; a scene
+   * embedded in the PNG keeps the files as they were.
+   */
+  prepareExportFiles?: PrepareExportFiles;
+  /**
+   * excalidraw-web: whether a selected element's link bar is hidden, as when
+   * the host shows a bar of its own there. Editing the link still shows the
+   * link editor.
+   */
+  hidesLinkInfo?: (element: NonDeletedExcalidrawElement) => boolean;
+  /**
    * excalidraw-web: the host's own sections of the library panel, shown
    * above the library's items while it is not being searched.
    */
   librarySections?: React.ReactNode;
 }
+
+/** The files a PNG export draws, given those the scene holds. */
+export type PrepareExportFiles = (files: BinaryFiles) => Promise<BinaryFiles>;
 
 /**
  * A switch of the host's in the image export dialog. Each export passes the

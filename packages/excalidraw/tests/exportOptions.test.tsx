@@ -1,13 +1,15 @@
 /**
  * The host's export options: switches in the image export dialog that change
  * what is exported, and exporting exactly a rectangle of the scene; and the
- * host's own sections of the library panel.
+ * host's own sections of the library panel; and the files a PNG export
+ * draws, which the host may replace.
  */
 import React from "react";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";
+import { actionCopyAsPng } from "../actions/actionClipboard";
 import { exportToCanvas } from "../scene/export";
 import { DEFAULT_SIDEBAR, LIBRARY_SIDEBAR_TAB } from "@excalidraw/common";
 import { getDefaultAppState } from "../appState";
@@ -15,7 +17,12 @@ import { getDefaultAppState } from "../appState";
 import { API } from "./helpers/api";
 import { act, fireEvent, render, waitFor } from "./test-utils";
 
-import type { AppState, ImageExportOption } from "../types";
+import type {
+  AppState,
+  BinaryFiles,
+  ImageExportOption,
+  PrepareExportFiles,
+} from "../types";
 
 const { h } = window;
 
@@ -87,6 +94,60 @@ describe("image export options", () => {
     ]);
     expect(document.querySelector(".ImageExportModal")).not.toBeNull();
     expect(document.querySelector('input[name="diamonds"]')).toBeNull();
+  });
+});
+
+describe("the files a PNG export draws", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const sceneFiles = (): BinaryFiles => ({
+    "file-1": {
+      id: "file-1",
+      mimeType: "image/png",
+      dataURL: "https://example.com/picture.png",
+      created: 1,
+    } as BinaryFiles[string],
+  });
+
+  const renderWithImage = async (prepareExportFiles: PrepareExportFiles) => {
+    await render(<Excalidraw prepareExportFiles={prepareExportFiles} />);
+    API.setElements([
+      API.createElement({ type: "image", x: 0, y: 0, fileId: "file-1" as any }),
+    ]);
+    act(() => {
+      h.app.addFiles(Object.values(sceneFiles()));
+    });
+  };
+
+  it("are the host's in the dialog's preview", async () => {
+    // jsdom lays nothing out; the preview draws only into a box with a size
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(300);
+    const prepareExportFiles = vi.fn(async (files: BinaryFiles) => files);
+    await renderWithImage(prepareExportFiles);
+    act(() => {
+      h.setState({ openDialog: { name: "imageExport" } });
+    });
+    await waitFor(() =>
+      expect(prepareExportFiles).toHaveBeenCalledWith(
+        expect.objectContaining({ "file-1": expect.anything() }),
+      ),
+    );
+  });
+
+  it("are the host's when copying as PNG", async () => {
+    const prepareExportFiles = vi.fn(async (files: BinaryFiles) => files);
+    await renderWithImage(prepareExportFiles);
+    await act(async () => {
+      h.app.actionManager.executeAction(actionCopyAsPng);
+    });
+    await waitFor(() =>
+      expect(prepareExportFiles).toHaveBeenCalledWith(
+        expect.objectContaining({ "file-1": expect.anything() }),
+      ),
+    );
   });
 });
 
