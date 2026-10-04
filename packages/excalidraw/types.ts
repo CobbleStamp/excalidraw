@@ -1148,6 +1148,11 @@ export interface ExcalidrawProps {
    */
   hidesLinkInfo?: (element: NonDeletedExcalidrawElement) => boolean;
   /**
+   * excalidraw-web: the tab the sidebar button opens the default sidebar on,
+   * as the one last used; the library when unset.
+   */
+  defaultSidebarTab?: SidebarTabName;
+  /**
    * excalidraw-web: the host's own sections of the library panel, shown
    * above the library's items while it is not being searched.
    */
