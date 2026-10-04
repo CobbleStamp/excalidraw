@@ -180,6 +180,13 @@ export type ActiveTool =
       customType: string;
     };
 
+/**
+ * excalidraw-web: the host app's own entries in a drawing, by key. The editor
+ * keeps them in files, undoes them one entry at a time, and never looks
+ * inside one.
+ */
+export type HostData = Readonly<Record<string, unknown>>;
+
 export type SidebarName = string;
 export type SidebarTabName = string;
 
@@ -266,6 +273,7 @@ export type ObservedAppState = ObservedStandaloneAppState &
 export type ObservedStandaloneAppState = {
   name: AppState["name"];
   viewBackgroundColor: AppState["viewBackgroundColor"];
+  hostData: AppState["hostData"];
 };
 
 export type ObservedElementsAppState = {
@@ -456,6 +464,8 @@ export interface AppState {
   /** The corner count the polygon tool draws with */
   currentItemPolygonSides: number;
   viewBackgroundColor: string;
+  /** excalidraw-web: the host app's own entries in the drawing, kept in files */
+  hostData: HostData;
   scrollX: number;
   scrollY: number;
   scrollConstraints: ScrollConstraints | null;

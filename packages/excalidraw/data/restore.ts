@@ -1297,6 +1297,12 @@ const restoreFontTopPicks = (
   return fontFamilies.size ? [...fontFamilies] : null;
 };
 
+/** The host's entries in untrusted data: a plain object, or none. */
+const restoreHostData = (value: unknown): AppState["hostData"] =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? { ...value }
+    : {};
+
 export const restoreAppState = (
   appState: ImportedDataState["appState"],
   localAppState: Partial<AppState> | null | undefined,
@@ -1417,6 +1423,9 @@ export const restoreAppState = (
       nextAppState.currentItemPolygonSides,
     ),
     editingFrame: null,
+    // the drawing's own, never carried over from the drawing open before;
+    // the host checks its entries itself
+    hostData: restoreHostData(appState.hostData),
   };
 };
 

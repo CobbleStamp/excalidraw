@@ -594,6 +594,9 @@ export class AppStateDelta implements DeltaContainer<AppState> {
       delta.delta.inserted.lockedMultiSelections ?? {},
     );
 
+    const [mergedDeletedHostData, mergedInsertedHostData] =
+      AppStateDelta.squashHostData(this.delta, delta.delta);
+
     const mergedInserted: Partial<ObservedAppState> = {};
     const mergedDeleted: Partial<ObservedAppState> = {};
 
@@ -622,13 +625,83 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         mergedInsertedLockedMultiSelections;
     }
 
+    mergedDeleted.hostData = mergedDeletedHostData;
+    mergedInserted.hostData = mergedInsertedHostData;
+
     this.delta = Delta.merge(
       this.delta,
       delta.delta,
       Delta.create(mergedDeleted, mergedInserted),
     );
 
+    if (
+      !Object.keys(mergedDeletedHostData).length &&
+      !Object.keys(mergedInsertedHostData).length
+    ) {
+      delete this.delta.deleted.hostData;
+      delete this.delta.inserted.hostData;
+    }
+
     return this;
+  }
+
+  /**
+   * Squashes two host data deltas entry by entry. An entry missing from a
+   * side is absent, not unchanged: one added in `first` was absent before,
+   * and one removed in `second` is absent after.
+   */
+  private static squashHostData(
+    first: Delta<ObservedAppState>,
+    second: Delta<ObservedAppState>,
+  ): [AppState["hostData"], AppState["hostData"]] {
+    const firstDeleted = first.deleted.hostData ?? {};
+    const firstInserted = first.inserted.hostData ?? {};
+    const secondDeleted = second.deleted.hostData ?? {};
+    const secondInserted = second.inserted.hostData ?? {};
+    const deleted: Record<string, unknown> = {};
+    const inserted: Record<string, unknown> = {};
+    const keys = new Set([
+      ...Object.keys(firstDeleted),
+      ...Object.keys(firstInserted),
+      ...Object.keys(secondDeleted),
+      ...Object.keys(secondInserted),
+    ]);
+    for (const key of keys) {
+      const beforeSide =
+        key in firstDeleted || key in firstInserted
+          ? firstDeleted
+          : secondDeleted;
+      const afterSide =
+        key in secondDeleted || key in secondInserted
+          ? secondInserted
+          : firstInserted;
+      const hasBefore = key in beforeSide;
+      const hasAfter = key in afterSide;
+      const before = beforeSide[key];
+      const after = afterSide[key];
+      const unchanged =
+        hasBefore === hasAfter &&
+        (!hasBefore ||
+          before === after ||
+          (typeof before === "object" &&
+            typeof after === "object" &&
+            before !== null &&
+            after !== null &&
+            isShallowEqual(
+              before as Record<string, unknown>,
+              after as Record<string, unknown>,
+            )));
+      if (unchanged) {
+        continue;
+      }
+      if (hasBefore) {
+        deleted[key] = before;
+      }
+      if (hasAfter) {
+        inserted[key] = after;
+      }
+    }
+    return [deleted, inserted];
   }
 
   public applyTo(
@@ -640,12 +713,14 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         selectedElementIds: deletedSelectedElementIds = {},
         selectedGroupIds: deletedSelectedGroupIds = {},
         lockedMultiSelections: deletedLockedMultiSelections = {},
+        hostData: deletedHostData = {},
       } = this.delta.deleted;
 
       const {
         selectedElementIds: insertedSelectedElementIds = {},
         selectedGroupIds: insertedSelectedGroupIds = {},
         lockedMultiSelections: insertedLockedMultiSelections = {},
+        hostData: insertedHostData = {},
         selectedLinearElement: insertedSelectedLinearElement,
         ...directlyApplicablePartial
       } = this.delta.inserted;
@@ -668,6 +743,13 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         deletedLockedMultiSelections,
       );
 
+      // entry by entry, so undo leaves others' entries alone
+      const mergedHostData = Delta.mergeObjects(
+        appState.hostData,
+        insertedHostData,
+        deletedHostData,
+      );
+
       const selectedLinearElement =
         insertedSelectedLinearElement &&
         nextElements.has(insertedSelectedLinearElement.elementId)
@@ -686,6 +768,7 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         selectedElementIds: mergedSelectedElementIds,
         selectedGroupIds: mergedSelectedGroupIds,
         lockedMultiSelections: mergedLockedMultiSelections,
+        hostData: mergedHostData,
         selectedLinearElement:
           typeof insertedSelectedLinearElement !== "undefined"
             ? selectedLinearElement
@@ -953,7 +1036,7 @@ export class AppStateDelta implements DeltaContainer<AppState> {
     delta: Partial<ObservedAppState>,
   ): Partial<ObservedElementsAppState> {
     // WARN: Do not remove the type-casts as they here to ensure proper type checks
-    const { name, viewBackgroundColor, ...elementsProps } =
+    const { name, viewBackgroundColor, hostData, ...elementsProps } =
       delta as ObservedAppState;
 
     return elementsProps as SubtypeOf<
@@ -989,6 +1072,12 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         inserted,
         "lockedMultiSelections",
         (prevValue) => (prevValue ?? {}) as ValueOf<T["lockedMultiSelections"]>,
+      );
+      Delta.diffObjects(
+        deleted,
+        inserted,
+        "hostData",
+        (prevValue) => prevValue as ValueOf<T["hostData"]>,
       );
     } catch (e) {
       // if postprocessing fails it does not make sense to bubble up, but let's make sure we know about it
