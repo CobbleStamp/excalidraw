@@ -4,12 +4,12 @@
  */
 import React from "react";
 
-import { CaptureUpdateAction } from "@excalidraw/element";
+import { CaptureUpdateAction, restoreViewPoints } from "@excalidraw/element";
 
 import { actionClearCanvas } from "../actions/actionCanvas";
 import { Excalidraw } from "../index";
 import { serializeAsJSON } from "../data/json";
-import { restoreAppState, restoreViewPoints } from "../data/restore";
+import { restoreAppState } from "../data/restore";
 import { getDefaultAppState } from "../appState";
 
 import { API } from "./helpers/api";
