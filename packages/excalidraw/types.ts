@@ -180,6 +180,22 @@ export type ActiveTool =
       customType: string;
     };
 
+/**
+ * A saved view of the drawing: an area in scene coordinates that going to it
+ * fits to the screen, named, and ordered in its list by a fractional index.
+ */
+export type ViewPoint = Readonly<{
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  index: string;
+}>;
+
+/** The drawing's view points, by id. */
+export type ViewPoints = Readonly<Record<string, ViewPoint>>;
+
 export type SidebarName = string;
 export type SidebarTabName = string;
 
@@ -266,6 +282,7 @@ export type ObservedAppState = ObservedStandaloneAppState &
 export type ObservedStandaloneAppState = {
   name: AppState["name"];
   viewBackgroundColor: AppState["viewBackgroundColor"];
+  viewPoints: AppState["viewPoints"];
 };
 
 export type ObservedElementsAppState = {
@@ -456,6 +473,8 @@ export interface AppState {
   /** The corner count the polygon tool draws with */
   currentItemPolygonSides: number;
   viewBackgroundColor: string;
+  /** The drawing's saved views, kept in files */
+  viewPoints: ViewPoints;
   scrollX: number;
   scrollY: number;
   scrollConstraints: ScrollConstraints | null;

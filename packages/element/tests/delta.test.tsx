@@ -630,6 +630,7 @@ describe("AppStateDelta", () => {
         editingLinearElementId: null,
         selectedLinearElementIsEditing: null,
         lockedMultiSelections: {},
+        viewPoints: {},
         activeLockedId: null,
       };
 
@@ -673,6 +674,7 @@ describe("AppStateDelta", () => {
         selectedLinearElement: null,
         activeLockedId: null,
         lockedMultiSelections: {},
+        viewPoints: {},
       };
 
       const prevAppState1: ObservedAppState = {
@@ -719,6 +721,7 @@ describe("AppStateDelta", () => {
         selectedLinearElement: null,
         activeLockedId: null,
         lockedMultiSelections: {},
+        viewPoints: {},
       };
 
       const prevAppState1: ObservedAppState = {
@@ -848,6 +851,62 @@ describe("AppStateDelta", () => {
           },
         ),
       );
+    });
+
+    it("should squash view points one by one, keeping added and removed ones absent", () => {
+      const area = { x: 0, y: 0, width: 100, height: 100, index: "a0" };
+      const added = { ...area, name: "View point 1" };
+      const renamed = { ...area, name: "Auth flow" };
+      const kept = { ...area, name: "Kept", index: "a1" };
+
+      // add one, then rename it and delete another
+      const appStateDelta = AppStateDelta.create(
+        Delta.create<Partial<ObservedAppState>>(
+          { viewPoints: {} },
+          { viewPoints: { a: added } },
+        ),
+      ).squash(
+        AppStateDelta.create(
+          Delta.create<Partial<ObservedAppState>>(
+            { viewPoints: { a: added, b: kept } },
+            { viewPoints: { a: renamed } },
+          ),
+        ),
+      );
+
+      expect(appStateDelta.delta).toEqual(
+        Delta.create<Partial<ObservedAppState>>(
+          { viewPoints: { b: kept } },
+          { viewPoints: { a: renamed } },
+        ),
+      );
+    });
+
+    it("should drop view points squashed back to how they were", () => {
+      const added = {
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        index: "a0",
+        name: "View point 1",
+      };
+
+      const appStateDelta = AppStateDelta.create(
+        Delta.create<Partial<ObservedAppState>>(
+          { viewPoints: {} },
+          { viewPoints: { a: added } },
+        ),
+      ).squash(
+        AppStateDelta.create(
+          Delta.create<Partial<ObservedAppState>>(
+            { viewPoints: { a: added } },
+            { viewPoints: {} },
+          ),
+        ),
+      );
+
+      expect(appStateDelta.isEmpty()).toBe(true);
     });
   });
 });

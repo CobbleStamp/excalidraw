@@ -441,6 +441,7 @@ export {
   restoreElement,
   restoreElements,
   restoreLibraryItems,
+  restoreViewPoints,
 } from "./data/restore";
 
 export { reconcileElements } from "./data/reconcile";

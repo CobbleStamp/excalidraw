@@ -32,6 +32,7 @@ import type {
   ObservedAppState,
   ObservedElementsAppState,
   ObservedStandaloneAppState,
+  ViewPoint,
 } from "@excalidraw/excalidraw/types";
 
 import { getObservedAppState } from "./store";
@@ -594,6 +595,9 @@ export class AppStateDelta implements DeltaContainer<AppState> {
       delta.delta.inserted.lockedMultiSelections ?? {},
     );
 
+    const [mergedDeletedViewPoints, mergedInsertedViewPoints] =
+      AppStateDelta.squashViewPoints(this.delta, delta.delta);
+
     const mergedInserted: Partial<ObservedAppState> = {};
     const mergedDeleted: Partial<ObservedAppState> = {};
 
@@ -622,13 +626,67 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         mergedInsertedLockedMultiSelections;
     }
 
+    mergedDeleted.viewPoints = mergedDeletedViewPoints;
+    mergedInserted.viewPoints = mergedInsertedViewPoints;
+
     this.delta = Delta.merge(
       this.delta,
       delta.delta,
       Delta.create(mergedDeleted, mergedInserted),
     );
 
+    if (
+      !Object.keys(mergedDeletedViewPoints).length &&
+      !Object.keys(mergedInsertedViewPoints).length
+    ) {
+      delete this.delta.deleted.viewPoints;
+      delete this.delta.inserted.viewPoints;
+    }
+
     return this;
+  }
+
+  /**
+   * Squashes two view point deltas key by key. A view point missing from a
+   * side is absent, not unchanged: one added in `first` was absent before,
+   * and one removed in `second` is absent after.
+   */
+  private static squashViewPoints(
+    first: Delta<ObservedAppState>,
+    second: Delta<ObservedAppState>,
+  ): [AppState["viewPoints"], AppState["viewPoints"]] {
+    const firstDeleted = first.deleted.viewPoints ?? {};
+    const firstInserted = first.inserted.viewPoints ?? {};
+    const secondDeleted = second.deleted.viewPoints ?? {};
+    const secondInserted = second.inserted.viewPoints ?? {};
+    const deleted: Record<string, ViewPoint> = {};
+    const inserted: Record<string, ViewPoint> = {};
+    const ids = new Set([
+      ...Object.keys(firstDeleted),
+      ...Object.keys(firstInserted),
+      ...Object.keys(secondDeleted),
+      ...Object.keys(secondInserted),
+    ]);
+    for (const id of ids) {
+      const before =
+        id in firstDeleted || id in firstInserted
+          ? firstDeleted[id]
+          : secondDeleted[id];
+      const after =
+        id in secondDeleted || id in secondInserted
+          ? secondInserted[id]
+          : firstInserted[id];
+      if (before === after) {
+        continue;
+      }
+      if (before) {
+        deleted[id] = before;
+      }
+      if (after) {
+        inserted[id] = after;
+      }
+    }
+    return [deleted, inserted];
   }
 
   public applyTo(
@@ -640,12 +698,14 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         selectedElementIds: deletedSelectedElementIds = {},
         selectedGroupIds: deletedSelectedGroupIds = {},
         lockedMultiSelections: deletedLockedMultiSelections = {},
+        viewPoints: deletedViewPoints = {},
       } = this.delta.deleted;
 
       const {
         selectedElementIds: insertedSelectedElementIds = {},
         selectedGroupIds: insertedSelectedGroupIds = {},
         lockedMultiSelections: insertedLockedMultiSelections = {},
+        viewPoints: insertedViewPoints = {},
         selectedLinearElement: insertedSelectedLinearElement,
         ...directlyApplicablePartial
       } = this.delta.inserted;
@@ -668,6 +728,13 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         deletedLockedMultiSelections,
       );
 
+      // view point by view point, so undo leaves others' view points alone
+      const mergedViewPoints = Delta.mergeObjects(
+        appState.viewPoints,
+        insertedViewPoints,
+        deletedViewPoints,
+      );
+
       const selectedLinearElement =
         insertedSelectedLinearElement &&
         nextElements.has(insertedSelectedLinearElement.elementId)
@@ -686,6 +753,7 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         selectedElementIds: mergedSelectedElementIds,
         selectedGroupIds: mergedSelectedGroupIds,
         lockedMultiSelections: mergedLockedMultiSelections,
+        viewPoints: mergedViewPoints,
         selectedLinearElement:
           typeof insertedSelectedLinearElement !== "undefined"
             ? selectedLinearElement
@@ -953,7 +1021,7 @@ export class AppStateDelta implements DeltaContainer<AppState> {
     delta: Partial<ObservedAppState>,
   ): Partial<ObservedElementsAppState> {
     // WARN: Do not remove the type-casts as they here to ensure proper type checks
-    const { name, viewBackgroundColor, ...elementsProps } =
+    const { name, viewBackgroundColor, viewPoints, ...elementsProps } =
       delta as ObservedAppState;
 
     return elementsProps as SubtypeOf<
@@ -989,6 +1057,12 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         inserted,
         "lockedMultiSelections",
         (prevValue) => (prevValue ?? {}) as ValueOf<T["lockedMultiSelections"]>,
+      );
+      Delta.diffObjects(
+        deleted,
+        inserted,
+        "viewPoints",
+        (prevValue) => prevValue as ValueOf<T["viewPoints"]>,
       );
     } catch (e) {
       // if postprocessing fails it does not make sense to bubble up, but let's make sure we know about it
