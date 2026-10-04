@@ -676,7 +676,10 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         id in secondDeleted || id in secondInserted
           ? secondInserted[id]
           : firstInserted[id];
-      if (before === after) {
+      if (
+        before === after ||
+        (before && after && isShallowEqual(before, after))
+      ) {
         continue;
       }
       if (before) {

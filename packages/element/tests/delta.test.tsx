@@ -882,6 +882,27 @@ describe("AppStateDelta", () => {
       );
     });
 
+    it("should drop a view point renamed and renamed back", () => {
+      const area = { x: 0, y: 0, width: 100, height: 100, index: "a0" };
+      const named = { ...area, name: "Auth flow" };
+
+      const appStateDelta = AppStateDelta.create(
+        Delta.create<Partial<ObservedAppState>>(
+          { viewPoints: { a: named } },
+          { viewPoints: { a: { ...area, name: "Renamed" } } },
+        ),
+      ).squash(
+        AppStateDelta.create(
+          Delta.create<Partial<ObservedAppState>>(
+            { viewPoints: { a: { ...area, name: "Renamed" } } },
+            { viewPoints: { a: { ...named } } },
+          ),
+        ),
+      );
+
+      expect(appStateDelta.isEmpty()).toBe(true);
+    });
+
     it("should drop view points squashed back to how they were", () => {
       const added = {
         x: 0,

@@ -433,7 +433,6 @@ export {
 } from "@excalidraw/element";
 
 export { getTextFromElements } from "@excalidraw/element";
-export { restoreViewPoints } from "@excalidraw/element";
 export { isInvisiblySmallElement } from "@excalidraw/element";
 
 export { defaultLang, useI18n, languages } from "./i18n";
