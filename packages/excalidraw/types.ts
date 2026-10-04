@@ -1119,7 +1119,55 @@ export interface ExcalidrawProps {
   reviseActionElements?: (
     elements: readonly ExcalidrawElement[],
   ) => readonly ExcalidrawElement[];
+  /**
+   * Switches the host adds to the image export dialog, each of which may
+   * change what is exported: the preview, PNG, SVG and the clipboard.
+   */
+  imageExportOptions?: readonly ImageExportOption[];
+  /**
+   * excalidraw-web: given the files a PNG export draws, returns those to draw
+   * instead, as with pictures the canvas could not otherwise export. Used by
+   * every PNG export, Copy as PNG and the export dialog's preview; a scene
+   * embedded in the PNG keeps the files as they were.
+   */
+  prepareExportFiles?: PrepareExportFiles;
+  /**
+   * excalidraw-web: whether a selected element's link bar is hidden, as when
+   * the host shows a bar of its own there. Editing the link still shows the
+   * link editor.
+   */
+  hidesLinkInfo?: (element: NonDeletedExcalidrawElement) => boolean;
+  /**
+   * excalidraw-web: the host's own sections of the library panel, shown
+   * above the library's items while it is not being searched.
+   */
+  librarySections?: React.ReactNode;
 }
+
+/** The files a PNG export draws, given those the scene holds and the elements exported. */
+export type PrepareExportFiles = (
+  files: BinaryFiles,
+  elements: readonly NonDeletedExcalidrawElement[],
+) => Promise<BinaryFiles>;
+
+/**
+ * A switch of the host's in the image export dialog. Each export passes the
+ * elements it would export through every option shown, in order.
+ */
+export type ImageExportOption = {
+  /** unique among the options; the switch's name */
+  name: string;
+  label: string;
+  tooltip?: string;
+  defaultChecked: boolean;
+  /** whether the switch shows for the elements being exported; always when absent */
+  appliesTo?: (elements: readonly NonDeletedExcalidrawElement[]) => boolean;
+  /** the elements to export, given those being exported and the switch's state */
+  exportedElements: (
+    elements: readonly NonDeletedExcalidrawElement[],
+    checked: boolean,
+  ) => readonly NonDeletedExcalidrawElement[];
+};
 
 /** A tool the host adds to the "more tools" menu, as the active custom tool `customType`. */
 export type CustomTool = {

@@ -1,8 +1,9 @@
 /**
  * The host's extension points: custom tools in the "more tools" menu,
  * replacing the editor's response to editing an element, images that cannot
- * be cropped, stroke colours for elements whose type has none, and revising
- * an action's elements within its undo step.
+ * be cropped, stroke colours for elements whose type has none, revising
+ * an action's elements within its undo step, and hiding a link's bar; and
+ * the eyedropper on a canvas it cannot read.
  */
 import React from "react";
 
@@ -387,6 +388,70 @@ describe("extension points", () => {
 
       expect(h.elements[0].strokeColor).toBe("#121212");
       expect(h.elements[0].customData).toEqual({ color: "#121212" });
+    });
+  });
+
+  describe("hidesLinkInfo", () => {
+    const selectLinkedRectangle = () => {
+      const rectangle = {
+        ...API.createElement({ type: "rectangle", x: 0, y: 0 }),
+        link: "https://example.com",
+      };
+      API.setElements([rectangle]);
+      API.setSelectedElements([rectangle]);
+    };
+    const linkBar = () =>
+      GlobalTestState.renderResult.container.querySelector(
+        ".excalidraw-hyperlinkContainer",
+      );
+    const linkEditor = () =>
+      GlobalTestState.renderResult.container.querySelector(
+        ".excalidraw-hyperlinkContainer-input",
+      );
+
+    it("hides the link's bar of an element it answers true for", async () => {
+      await renderEditor({ hidesLinkInfo: () => true });
+      selectLinkedRectangle();
+      act(() => h.setState({ showHyperlinkPopup: "info" }));
+      expect(linkBar()).toBeNull();
+    });
+
+    it("still shows the link editor", async () => {
+      await renderEditor({ hidesLinkInfo: () => true });
+      selectLinkedRectangle();
+      act(() => h.setState({ showHyperlinkPopup: "editor" }));
+      expect(linkEditor()).not.toBeNull();
+    });
+
+    it("shows the link's bar of an element it answers false for", async () => {
+      await renderEditor({ hidesLinkInfo: () => false });
+      selectLinkedRectangle();
+      act(() => h.setState({ showHyperlinkPopup: "info" }));
+      expect(linkBar()).not.toBeNull();
+    });
+  });
+
+  describe("the eyedropper", () => {
+    it("says it cannot read a canvas the browser forbids reading, and stops", async () => {
+      await renderEditor();
+      const rectangle = API.createElement({ type: "rectangle", x: 0, y: 0 });
+      API.setElements([rectangle]);
+      API.setSelectedElements([rectangle]);
+      const context = h.app.canvas.getContext("2d")!;
+      vi.spyOn(context, "getImageData").mockImplementation(() => {
+        throw new DOMException("tainted", "SecurityError");
+      });
+      Keyboard.withModifierKeys({ shift: true }, () => {
+        Keyboard.keyPress(KEYS.S);
+      });
+      await waitFor(() =>
+        expect(h.state.toast?.message).toMatch(/eyedropper can't read/),
+      );
+      expect(
+        GlobalTestState.renderResult.container.querySelector(
+          ".excalidraw-eye-dropper-backdrop",
+        ),
+      ).toBeNull();
     });
   });
 });

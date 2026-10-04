@@ -280,6 +280,7 @@ export const actionSaveToActiveFile = register({
             exportedDataPromise,
             previousFileHandle,
             filename,
+            app.props.prepareExportFiles,
           )
         : await saveAsJSON({
             data: exportedDataPromise,

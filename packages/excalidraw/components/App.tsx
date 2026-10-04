@@ -2556,7 +2556,12 @@ class App extends React.Component<AppProps, AppState> {
                             selectedElements.length === 1 &&
                             this.state.openDialog?.name !==
                               "elementLinkSelector" &&
-                            this.state.showHyperlinkPopup && (
+                            this.state.showHyperlinkPopup &&
+                            // excalidraw-web: the host may hide the link's bar, not its editor
+                            !(
+                              this.state.showHyperlinkPopup === "info" &&
+                              this.props.hidesLinkInfo?.(firstSelectedElement)
+                            ) && (
                               <Hyperlink
                                 key={firstSelectedElement.id}
                                 element={firstSelectedElement}
@@ -2832,6 +2837,7 @@ class App extends React.Component<AppProps, AppState> {
         name: this.getName(),
         viewBackgroundColor: this.state.viewBackgroundColor,
         exportingFrame: opts.exportingFrame,
+        prepareFiles: this.props.prepareExportFiles,
       },
     )
       .catch(muteFSAbortError)

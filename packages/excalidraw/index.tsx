@@ -74,6 +74,11 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     isImageCroppable,
     takesStrokeColor,
     reviseActionElements,
+    imageExportOptions,
+    prepareExportFiles,
+    hidesLinkInfo,
+    // excalidraw-web: the host's own sections of the library panel
+    librarySections,
     className,
     ownerDocument = document,
     onChange,
@@ -223,6 +228,11 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           isImageCroppable={isImageCroppable}
           takesStrokeColor={takesStrokeColor}
           reviseActionElements={reviseActionElements}
+          imageExportOptions={imageExportOptions}
+          prepareExportFiles={prepareExportFiles}
+          hidesLinkInfo={hidesLinkInfo}
+          // excalidraw-web: the host's own sections of the library panel
+          librarySections={librarySections}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

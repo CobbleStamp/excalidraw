@@ -36,7 +36,7 @@ import { fileSave } from "./filesystem";
 import { serializeAsJSON } from "./json";
 
 import type { ExportType } from "../scene/types";
-import type { AppState, BinaryFiles } from "../types";
+import type { AppState, BinaryFiles, PrepareExportFiles } from "../types";
 
 export { loadFromBlob } from "./blob";
 export { loadFromJSON, saveAsJSON } from "./json";
@@ -107,6 +107,7 @@ export const exportCanvas = async (
     name = appState.name || DEFAULT_FILENAME,
     fileHandle = null,
     exportingFrame = null,
+    prepareFiles,
   }: {
     exportBackground: boolean;
     exportPadding?: number;
@@ -115,6 +116,8 @@ export const exportCanvas = async (
     name?: string;
     fileHandle?: FileSystemFileHandle | null;
     exportingFrame: NonDeleted<ExcalidrawFrameLikeElement> | null;
+    /** excalidraw-web: the host's files to draw a PNG from */
+    prepareFiles?: PrepareExportFiles;
   },
 ) => {
   if (elements.length === 0) {
@@ -163,12 +166,19 @@ export const exportCanvas = async (
     }
   }
 
-  const tempCanvas = exportToCanvas(elements, appState, files, {
-    exportBackground,
-    viewBackgroundColor,
-    exportPadding,
-    exportingFrame,
-  });
+  // excalidraw-web: the host's files are awaited inside the canvas promise,
+  // which the clipboard and file picker take while the user's click lasts
+  const drawnFiles = prepareFiles
+    ? prepareFiles(files, elements)
+    : Promise.resolve(files);
+  const tempCanvas = drawnFiles.then((pictureFiles) =>
+    exportToCanvas(elements, appState, pictureFiles, {
+      exportBackground,
+      viewBackgroundColor,
+      exportPadding,
+      exportingFrame,
+    }),
+  );
 
   if (type === "png") {
     let blob = canvasToBlob(tempCanvas);

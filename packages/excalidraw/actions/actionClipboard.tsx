@@ -216,6 +216,7 @@ export const actionCopyAsPng = register({
         ...appState,
         exportingFrame,
         name: app.getName(),
+        prepareFiles: app.props.prepareExportFiles,
       });
       return {
         appState: {

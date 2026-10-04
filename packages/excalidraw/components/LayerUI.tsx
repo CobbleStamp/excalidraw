@@ -232,6 +232,9 @@ const LayerUI = ({
         onExportImage={onExportImage}
         onCloseRequest={() => setAppState({ openDialog: null })}
         name={app.getName()}
+        // excalidraw-web: the host's export options
+        options={app.props.imageExportOptions}
+        prepareFiles={app.props.prepareExportFiles}
       />
     );
   };
