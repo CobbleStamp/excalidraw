@@ -498,7 +498,7 @@ const LayerUI = ({
                 );
               }
             }}
-            tab={DEFAULT_SIDEBAR.defaultTab}
+            tab={app.props.defaultSidebarTab ?? DEFAULT_SIDEBAR.defaultTab}
           />
         </>
       )}

@@ -2,8 +2,9 @@
  * The host's extension points: custom tools in the "more tools" menu,
  * replacing the editor's response to editing an element, images that cannot
  * be cropped, stroke colours for elements whose type has none, revising
- * an action's elements within its undo step, and hiding a link's bar; and
- * the eyedropper on a canvas it cannot read.
+ * an action's elements within its undo step, and hiding a link's bar; the
+ * eyedropper on a canvas it cannot read; and the tab the sidebar button
+ * opens.
  */
 import React from "react";
 
@@ -452,6 +453,27 @@ describe("extension points", () => {
           ".excalidraw-eye-dropper-backdrop",
         ),
       ).toBeNull();
+    });
+  });
+
+  describe("defaultSidebarTab", () => {
+    const openSidebar = () =>
+      fireEvent.click(
+        GlobalTestState.renderResult.container
+          .querySelector(".default-sidebar-trigger")!
+          .closest("button")!,
+      );
+
+    it("opens the sidebar on the host's tab", async () => {
+      await render(<Excalidraw defaultSidebarTab="search" />);
+      openSidebar();
+      expect(h.state.openSidebar).toEqual({ name: "default", tab: "search" });
+    });
+
+    it("opens it on the library when unset", async () => {
+      await render(<Excalidraw />);
+      openSidebar();
+      expect(h.state.openSidebar).toEqual({ name: "default", tab: "library" });
     });
   });
 });
