@@ -630,7 +630,7 @@ describe("AppStateDelta", () => {
         editingLinearElementId: null,
         selectedLinearElementIsEditing: null,
         lockedMultiSelections: {},
-        viewPoints: {},
+        hostData: {},
         activeLockedId: null,
       };
 
@@ -674,7 +674,7 @@ describe("AppStateDelta", () => {
         selectedLinearElement: null,
         activeLockedId: null,
         lockedMultiSelections: {},
-        viewPoints: {},
+        hostData: {},
       };
 
       const prevAppState1: ObservedAppState = {
@@ -721,7 +721,7 @@ describe("AppStateDelta", () => {
         selectedLinearElement: null,
         activeLockedId: null,
         lockedMultiSelections: {},
-        viewPoints: {},
+        hostData: {},
       };
 
       const prevAppState1: ObservedAppState = {
@@ -853,7 +853,7 @@ describe("AppStateDelta", () => {
       );
     });
 
-    it("should squash view points one by one, keeping added and removed ones absent", () => {
+    it("should squash host data entry by entry, keeping added and removed ones absent", () => {
       const area = { x: 0, y: 0, width: 100, height: 100, index: "a0" };
       const added = { ...area, name: "View point 1" };
       const renamed = { ...area, name: "Auth flow" };
@@ -862,40 +862,40 @@ describe("AppStateDelta", () => {
       // add one, then rename it and delete another
       const appStateDelta = AppStateDelta.create(
         Delta.create<Partial<ObservedAppState>>(
-          { viewPoints: {} },
-          { viewPoints: { a: added } },
+          { hostData: {} },
+          { hostData: { a: added } },
         ),
       ).squash(
         AppStateDelta.create(
           Delta.create<Partial<ObservedAppState>>(
-            { viewPoints: { a: added, b: kept } },
-            { viewPoints: { a: renamed } },
+            { hostData: { a: added, b: kept } },
+            { hostData: { a: renamed } },
           ),
         ),
       );
 
       expect(appStateDelta.delta).toEqual(
         Delta.create<Partial<ObservedAppState>>(
-          { viewPoints: { b: kept } },
-          { viewPoints: { a: renamed } },
+          { hostData: { b: kept } },
+          { hostData: { a: renamed } },
         ),
       );
     });
 
-    it("should drop a view point renamed and renamed back", () => {
+    it("should drop an entry changed and changed back", () => {
       const area = { x: 0, y: 0, width: 100, height: 100, index: "a0" };
       const named = { ...area, name: "Auth flow" };
 
       const appStateDelta = AppStateDelta.create(
         Delta.create<Partial<ObservedAppState>>(
-          { viewPoints: { a: named } },
-          { viewPoints: { a: { ...area, name: "Renamed" } } },
+          { hostData: { a: named } },
+          { hostData: { a: { ...area, name: "Renamed" } } },
         ),
       ).squash(
         AppStateDelta.create(
           Delta.create<Partial<ObservedAppState>>(
-            { viewPoints: { a: { ...area, name: "Renamed" } } },
-            { viewPoints: { a: { ...named } } },
+            { hostData: { a: { ...area, name: "Renamed" } } },
+            { hostData: { a: { ...named } } },
           ),
         ),
       );
@@ -903,7 +903,7 @@ describe("AppStateDelta", () => {
       expect(appStateDelta.isEmpty()).toBe(true);
     });
 
-    it("should drop view points squashed back to how they were", () => {
+    it("should drop host data squashed back to how it was", () => {
       const added = {
         x: 0,
         y: 0,
@@ -915,14 +915,14 @@ describe("AppStateDelta", () => {
 
       const appStateDelta = AppStateDelta.create(
         Delta.create<Partial<ObservedAppState>>(
-          { viewPoints: {} },
-          { viewPoints: { a: added } },
+          { hostData: {} },
+          { hostData: { a: added } },
         ),
       ).squash(
         AppStateDelta.create(
           Delta.create<Partial<ObservedAppState>>(
-            { viewPoints: { a: added } },
-            { viewPoints: {} },
+            { hostData: { a: added } },
+            { hostData: {} },
           ),
         ),
       );

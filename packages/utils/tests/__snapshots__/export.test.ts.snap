@@ -67,6 +67,7 @@ exports[`exportToSvg > with default arguments 1`] = `
   "gridModeEnabled": false,
   "gridSize": 20,
   "gridStep": 5,
+  "hostData": {},
   "hoveredArrowTextAnchor": null,
   "hoveredElementIds": {},
   "inputDevice": "auto",
@@ -122,7 +123,6 @@ exports[`exportToSvg > with default arguments 1`] = `
   "toast": null,
   "viewBackgroundColor": "#ffffff",
   "viewModeEnabled": false,
-  "viewPoints": {},
   "zenModeEnabled": false,
   "zoom": {
     "value": 1,

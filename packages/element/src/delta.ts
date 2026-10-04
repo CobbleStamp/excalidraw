@@ -32,7 +32,6 @@ import type {
   ObservedAppState,
   ObservedElementsAppState,
   ObservedStandaloneAppState,
-  ViewPoint,
 } from "@excalidraw/excalidraw/types";
 
 import { getObservedAppState } from "./store";
@@ -595,8 +594,8 @@ export class AppStateDelta implements DeltaContainer<AppState> {
       delta.delta.inserted.lockedMultiSelections ?? {},
     );
 
-    const [mergedDeletedViewPoints, mergedInsertedViewPoints] =
-      AppStateDelta.squashViewPoints(this.delta, delta.delta);
+    const [mergedDeletedHostData, mergedInsertedHostData] =
+      AppStateDelta.squashHostData(this.delta, delta.delta);
 
     const mergedInserted: Partial<ObservedAppState> = {};
     const mergedDeleted: Partial<ObservedAppState> = {};
@@ -626,8 +625,8 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         mergedInsertedLockedMultiSelections;
     }
 
-    mergedDeleted.viewPoints = mergedDeletedViewPoints;
-    mergedInserted.viewPoints = mergedInsertedViewPoints;
+    mergedDeleted.hostData = mergedDeletedHostData;
+    mergedInserted.hostData = mergedInsertedHostData;
 
     this.delta = Delta.merge(
       this.delta,
@@ -636,57 +635,70 @@ export class AppStateDelta implements DeltaContainer<AppState> {
     );
 
     if (
-      !Object.keys(mergedDeletedViewPoints).length &&
-      !Object.keys(mergedInsertedViewPoints).length
+      !Object.keys(mergedDeletedHostData).length &&
+      !Object.keys(mergedInsertedHostData).length
     ) {
-      delete this.delta.deleted.viewPoints;
-      delete this.delta.inserted.viewPoints;
+      delete this.delta.deleted.hostData;
+      delete this.delta.inserted.hostData;
     }
 
     return this;
   }
 
   /**
-   * Squashes two view point deltas key by key. A view point missing from a
+   * Squashes two host data deltas entry by entry. An entry missing from a
    * side is absent, not unchanged: one added in `first` was absent before,
    * and one removed in `second` is absent after.
    */
-  private static squashViewPoints(
+  private static squashHostData(
     first: Delta<ObservedAppState>,
     second: Delta<ObservedAppState>,
-  ): [AppState["viewPoints"], AppState["viewPoints"]] {
-    const firstDeleted = first.deleted.viewPoints ?? {};
-    const firstInserted = first.inserted.viewPoints ?? {};
-    const secondDeleted = second.deleted.viewPoints ?? {};
-    const secondInserted = second.inserted.viewPoints ?? {};
-    const deleted: Record<string, ViewPoint> = {};
-    const inserted: Record<string, ViewPoint> = {};
-    const ids = new Set([
+  ): [AppState["hostData"], AppState["hostData"]] {
+    const firstDeleted = first.deleted.hostData ?? {};
+    const firstInserted = first.inserted.hostData ?? {};
+    const secondDeleted = second.deleted.hostData ?? {};
+    const secondInserted = second.inserted.hostData ?? {};
+    const deleted: Record<string, unknown> = {};
+    const inserted: Record<string, unknown> = {};
+    const keys = new Set([
       ...Object.keys(firstDeleted),
       ...Object.keys(firstInserted),
       ...Object.keys(secondDeleted),
       ...Object.keys(secondInserted),
     ]);
-    for (const id of ids) {
-      const before =
-        id in firstDeleted || id in firstInserted
-          ? firstDeleted[id]
-          : secondDeleted[id];
-      const after =
-        id in secondDeleted || id in secondInserted
-          ? secondInserted[id]
-          : firstInserted[id];
-      if (
-        before === after ||
-        (before && after && isShallowEqual(before, after))
-      ) {
+    for (const key of keys) {
+      const beforeSide =
+        key in firstDeleted || key in firstInserted
+          ? firstDeleted
+          : secondDeleted;
+      const afterSide =
+        key in secondDeleted || key in secondInserted
+          ? secondInserted
+          : firstInserted;
+      const hasBefore = key in beforeSide;
+      const hasAfter = key in afterSide;
+      const before = beforeSide[key];
+      const after = afterSide[key];
+      const unchanged =
+        hasBefore === hasAfter &&
+        (!hasBefore ||
+          before === after ||
+          (typeof before === "object" &&
+            typeof after === "object" &&
+            before !== null &&
+            after !== null &&
+            isShallowEqual(
+              before as Record<string, unknown>,
+              after as Record<string, unknown>,
+            )));
+      if (unchanged) {
         continue;
       }
-      if (before) {
-        deleted[id] = before;
+      if (hasBefore) {
+        deleted[key] = before;
       }
-      if (after) {
-        inserted[id] = after;
+      if (hasAfter) {
+        inserted[key] = after;
       }
     }
     return [deleted, inserted];
@@ -701,14 +713,14 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         selectedElementIds: deletedSelectedElementIds = {},
         selectedGroupIds: deletedSelectedGroupIds = {},
         lockedMultiSelections: deletedLockedMultiSelections = {},
-        viewPoints: deletedViewPoints = {},
+        hostData: deletedHostData = {},
       } = this.delta.deleted;
 
       const {
         selectedElementIds: insertedSelectedElementIds = {},
         selectedGroupIds: insertedSelectedGroupIds = {},
         lockedMultiSelections: insertedLockedMultiSelections = {},
-        viewPoints: insertedViewPoints = {},
+        hostData: insertedHostData = {},
         selectedLinearElement: insertedSelectedLinearElement,
         ...directlyApplicablePartial
       } = this.delta.inserted;
@@ -731,11 +743,11 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         deletedLockedMultiSelections,
       );
 
-      // view point by view point, so undo leaves others' view points alone
-      const mergedViewPoints = Delta.mergeObjects(
-        appState.viewPoints,
-        insertedViewPoints,
-        deletedViewPoints,
+      // entry by entry, so undo leaves others' entries alone
+      const mergedHostData = Delta.mergeObjects(
+        appState.hostData,
+        insertedHostData,
+        deletedHostData,
       );
 
       const selectedLinearElement =
@@ -756,7 +768,7 @@ export class AppStateDelta implements DeltaContainer<AppState> {
         selectedElementIds: mergedSelectedElementIds,
         selectedGroupIds: mergedSelectedGroupIds,
         lockedMultiSelections: mergedLockedMultiSelections,
-        viewPoints: mergedViewPoints,
+        hostData: mergedHostData,
         selectedLinearElement:
           typeof insertedSelectedLinearElement !== "undefined"
             ? selectedLinearElement
@@ -1024,7 +1036,7 @@ export class AppStateDelta implements DeltaContainer<AppState> {
     delta: Partial<ObservedAppState>,
   ): Partial<ObservedElementsAppState> {
     // WARN: Do not remove the type-casts as they here to ensure proper type checks
-    const { name, viewBackgroundColor, viewPoints, ...elementsProps } =
+    const { name, viewBackgroundColor, hostData, ...elementsProps } =
       delta as ObservedAppState;
 
     return elementsProps as SubtypeOf<
@@ -1064,8 +1076,8 @@ export class AppStateDelta implements DeltaContainer<AppState> {
       Delta.diffObjects(
         deleted,
         inserted,
-        "viewPoints",
-        (prevValue) => prevValue as ValueOf<T["viewPoints"]>,
+        "hostData",
+        (prevValue) => prevValue as ValueOf<T["hostData"]>,
       );
     } catch (e) {
       // if postprocessing fails it does not make sense to bubble up, but let's make sure we know about it

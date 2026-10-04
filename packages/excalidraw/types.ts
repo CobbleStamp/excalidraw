@@ -181,20 +181,11 @@ export type ActiveTool =
     };
 
 /**
- * A saved view of the drawing: an area in scene coordinates that going to it
- * fits to the screen, named, and ordered in its list by a fractional index.
+ * excalidraw-web: the host app's own entries in a drawing, by key. The editor
+ * keeps them in files, undoes them one entry at a time, and never looks
+ * inside one.
  */
-export type ViewPoint = Readonly<{
-  name: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  index: string;
-}>;
-
-/** The drawing's view points, by id. */
-export type ViewPoints = Readonly<Record<string, ViewPoint>>;
+export type HostData = Readonly<Record<string, unknown>>;
 
 export type SidebarName = string;
 export type SidebarTabName = string;
@@ -282,7 +273,7 @@ export type ObservedAppState = ObservedStandaloneAppState &
 export type ObservedStandaloneAppState = {
   name: AppState["name"];
   viewBackgroundColor: AppState["viewBackgroundColor"];
-  viewPoints: AppState["viewPoints"];
+  hostData: AppState["hostData"];
 };
 
 export type ObservedElementsAppState = {
@@ -473,8 +464,8 @@ export interface AppState {
   /** The corner count the polygon tool draws with */
   currentItemPolygonSides: number;
   viewBackgroundColor: string;
-  /** The drawing's saved views, kept in files */
-  viewPoints: ViewPoints;
+  /** excalidraw-web: the host app's own entries in the drawing, kept in files */
+  hostData: HostData;
   scrollX: number;
   scrollY: number;
   scrollConstraints: ScrollConstraints | null;
