@@ -3,8 +3,8 @@
  * replacing the editor's response to editing an element, images that cannot
  * be cropped, stroke colours for elements whose type has none, revising
  * an action's elements within its undo step, and hiding a link's bar; the
- * eyedropper on a canvas it cannot read; and the tab the sidebar button
- * opens.
+ * eyedropper on a canvas it cannot read; the tab the sidebar button
+ * opens; and embeds checked again when the host's rule for them changes.
  */
 import React from "react";
 
@@ -25,7 +25,15 @@ import { actionChangeStrokeColor } from "../actions/actionProperties";
 
 import { API } from "./helpers/api";
 import { Keyboard, Pointer } from "./helpers/ui";
-import { act, fireEvent, GlobalTestState, render, waitFor } from "./test-utils";
+import {
+  act,
+  fireEvent,
+  GlobalTestState,
+  mockBoundingClientRect,
+  render,
+  restoreOriginalGetBoundingClientRect,
+  waitFor,
+} from "./test-utils";
 
 import type { CustomTool, ExcalidrawProps } from "../types";
 
@@ -474,6 +482,46 @@ describe("extension points", () => {
       await render(<Excalidraw />);
       openSidebar();
       expect(h.state.openSidebar).toEqual({ name: "default", tab: "library" });
+    });
+  });
+
+  describe("validateEmbeddable", () => {
+    beforeEach(() => {
+      mockBoundingClientRect();
+    });
+    afterEach(() => {
+      restoreOriginalGetBoundingClientRect();
+    });
+    const hosted = (): React.JSX.Element => <div data-testid="hosted-embed" />;
+    const shown = () =>
+      GlobalTestState.renderResult.container.querySelector(
+        "[data-testid='hosted-embed']",
+      );
+
+    it("checks every embed again when the host's rule changes", async () => {
+      await render(
+        <Excalidraw
+          validateEmbeddable={() => false}
+          renderEmbeddable={hosted}
+        />,
+      );
+      await waitFor(() => expect(h.state.width).toBe(200));
+      const embed = API.createElement({
+        type: "embeddable",
+        x: 20,
+        y: 20,
+        width: 120,
+        height: 90,
+      });
+      API.setElements([embed]);
+      API.updateElement(embed, { link: "https://videos.example.com/clip" });
+      await waitFor(() => expect(h.elements).toHaveLength(1));
+      expect(shown()).toBeNull();
+
+      GlobalTestState.renderResult.rerender(
+        <Excalidraw validateEmbeddable={() => true} renderEmbeddable={hosted} />,
+      );
+      await waitFor(() => expect(shown()).not.toBeNull());
     });
   });
 });
