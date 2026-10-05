@@ -2,7 +2,7 @@
  * The host's extension points: custom tools in the "more tools" menu,
  * replacing the editor's response to editing an element, images that cannot
  * be cropped, stroke colours for elements whose type has none, revising
- * an action's elements within its undo step, and hiding a link's bar; the
+ * an action's elements within its undo step, and hiding a link's bar or editor; the
  * eyedropper on a canvas it cannot read; the tab the sidebar button
  * opens; embeds checked again when the host's rule for them changes; and
  * links the host follows on a click, is told are hovered, draws the icons
@@ -449,6 +449,15 @@ describe("extension points", () => {
       selectLinkedRectangle();
       act(() => h.setState({ showHyperlinkPopup: "editor" }));
       expect(linkEditor()).not.toBeNull();
+    });
+
+    it("hides the link editor of an element hidesLinkEditor answers true for", async () => {
+      await renderEditor({ hidesLinkEditor: () => true });
+      selectLinkedRectangle();
+      act(() => h.setState({ showHyperlinkPopup: "editor" }));
+      expect(linkEditor()).toBeNull();
+      act(() => h.setState({ showHyperlinkPopup: "info" }));
+      expect(linkBar()).not.toBeNull();
     });
 
     it("shows the link's bar of an element it answers false for", async () => {

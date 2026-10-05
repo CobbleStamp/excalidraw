@@ -77,6 +77,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     imageExportOptions,
     prepareExportFiles,
     hidesLinkInfo,
+    hidesLinkEditor,
     followsLinkOnClick,
     onLinkHover,
     linkIcon,
@@ -236,6 +237,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           imageExportOptions={imageExportOptions}
           prepareExportFiles={prepareExportFiles}
           hidesLinkInfo={hidesLinkInfo}
+          hidesLinkEditor={hidesLinkEditor}
           followsLinkOnClick={followsLinkOnClick}
           onLinkHover={onLinkHover}
           linkIcon={linkIcon}

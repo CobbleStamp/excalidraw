@@ -2574,10 +2574,14 @@ class App extends React.Component<AppProps, AppState> {
                             this.state.openDialog?.name !==
                               "elementLinkSelector" &&
                             this.state.showHyperlinkPopup &&
-                            // excalidraw-web: the host may hide the link's bar, not its editor
+                            // excalidraw-web: the host may hide the link's bar, and its editor
                             !(
                               this.state.showHyperlinkPopup === "info" &&
                               this.props.hidesLinkInfo?.(firstSelectedElement)
+                            ) &&
+                            !(
+                              this.state.showHyperlinkPopup === "editor" &&
+                              this.props.hidesLinkEditor?.(firstSelectedElement)
                             ) && (
                               <Hyperlink
                                 key={firstSelectedElement.id}

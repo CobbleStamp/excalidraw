@@ -1148,6 +1148,12 @@ export interface ExcalidrawProps {
    */
   hidesLinkInfo?: (element: NonDeletedExcalidrawElement) => boolean;
   /**
+   * excalidraw-web: whether a selected element's link editor is hidden, as
+   * when the host shows an editor of its own while `showHyperlinkPopup` is
+   * "editor"; the host then closes it by setting that to `false`.
+   */
+  hidesLinkEditor?: (element: NonDeletedExcalidrawElement) => boolean;
+  /**
    * excalidraw-web: whether a click anywhere on a linked element follows its
    * link, as in view mode, rather than on its icon alone. Outside view mode,
    * pressing and dragging still moves it, and a still press held for
