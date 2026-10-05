@@ -48,6 +48,7 @@ import {
   TEXT_TO_CENTER_SNAP_THRESHOLD,
   THEME,
   TOUCH_CTX_MENU_TIMEOUT,
+  LINK_LONG_PRESS_TIMEOUT,
   VERTICAL_ALIGN,
   YOUTUBE_STATES,
   POINTER_EVENTS,
@@ -744,6 +745,22 @@ class App extends React.Component<AppProps, AppState> {
     null;
 
   hitLinkElement?: NonDeletedExcalidrawElement;
+  /** excalidraw-web: the linked element last reported to `onLinkHover` */
+  private hoveredLinkElementId: ExcalidrawElement["id"] | null = null;
+  /**
+   * excalidraw-web: a press on an element whose link the host follows on a
+   * click, with the selection before it, to follow the link on a release
+   * that neither moved nor held
+   */
+  private linkPress: {
+    element: NonDeletedExcalidrawElement;
+    clientX: number;
+    clientY: number;
+    timeStamp: number;
+    selectedElementIds: AppState["selectedElementIds"];
+    selectedGroupIds: AppState["selectedGroupIds"];
+    editingGroupId: AppState["editingGroupId"];
+  } | null = null;
   lastPointerDownEvent: React.PointerEvent<HTMLElement> | null = null;
   /**
    * the handle of the resize in progress while `state.isResizing` — for UI
@@ -2688,6 +2705,7 @@ class App extends React.Component<AppProps, AppState> {
                               isExporting: false,
                               renderGrid: isGridModeEnabled(this),
                               renderLinks: this.isLinksEnabled(),
+                              linkIcon: this.props.linkIcon,
                               canvasBackgroundColor:
                                 this.state.viewBackgroundColor,
                               embedsValidationStatus:
@@ -7548,9 +7566,32 @@ class App extends React.Component<AppProps, AppState> {
     ];
   };
 
+  /**
+   * excalidraw-web: whether a press anywhere on `element` reaches its link,
+   * rather than on its icon alone: in view mode off phones, as upstream, and
+   * wherever the host follows its link on a click — except, outside view
+   * mode, at the start of a press, which selects and drags it as any element.
+   */
+  private linkCoversElement = (
+    element: NonDeletedExcalidrawElement,
+    pressing: boolean,
+  ): boolean => {
+    if (
+      this.state.viewModeEnabled &&
+      this.editorInterface.formFactor !== "phone"
+    ) {
+      return true;
+    }
+    if (pressing && !this.state.viewModeEnabled) {
+      return false;
+    }
+    return this.props.followsLinkOnClick?.(element) ?? false;
+  };
+
   private getElementLinkAtPosition = (
     scenePointer: Readonly<{ x: number; y: number }>,
     hitElementMightBeLocked: NonDeletedExcalidrawElement | null,
+    pressing: boolean = false,
   ): NonDeletedExcalidrawElement | undefined => {
     if (hitElementMightBeLocked && hitElementMightBeLocked.locked) {
       return undefined;
@@ -7575,7 +7616,7 @@ class App extends React.Component<AppProps, AppState> {
           this.scene.getNonDeletedElementsMap(),
           this.state,
           pointFrom(scenePointer.x, scenePointer.y),
-          this.editorInterface.formFactor === "phone",
+          this.linkCoversElement(element, pressing),
         )
       ) {
         return element;
@@ -7609,7 +7650,7 @@ class App extends React.Component<AppProps, AppState> {
       elementsMap,
       this.state,
       pointFrom(lastPointerDownCoords.x, lastPointerDownCoords.y),
-      this.editorInterface.formFactor === "phone",
+      this.linkCoversElement(this.hitLinkElement, false),
     );
     const lastPointerUpCoords = viewportCoordsToSceneCoords(
       this.lastPointerUpEvent!,
@@ -7620,35 +7661,105 @@ class App extends React.Component<AppProps, AppState> {
       elementsMap,
       this.state,
       pointFrom(lastPointerUpCoords.x, lastPointerUpCoords.y),
-      this.editorInterface.formFactor === "phone",
+      this.linkCoversElement(this.hitLinkElement, false),
     );
     if (lastPointerDownHittingLinkIcon && lastPointerUpHittingLinkIcon) {
-      hideHyperlinkToolip();
-      let url = this.hitLinkElement.link;
-      if (url) {
-        url = normalizeLink(url);
-        let customEvent;
-        if (this.props.onLinkOpen) {
-          customEvent = wrapEvent(EVENT.EXCALIDRAW_LINK, event.nativeEvent);
-          this.props.onLinkOpen(
-            {
-              ...this.hitLinkElement,
-              link: url,
-            },
-            customEvent,
-          );
-        }
-        if (!customEvent?.defaultPrevented) {
-          const target = isLocalLink(url) ? "_self" : "_blank";
-          const newWindow = this.ownerWindow.open(undefined, target);
-          // https://mathiasbynens.github.io/rel-noopener/
-          if (newWindow) {
-            newWindow.opener = null;
-            newWindow.location = url;
-          }
+      this.openElementLink(this.hitLinkElement, event.nativeEvent);
+    }
+  };
+
+  /** Follows an element's link: through the host's `onLinkOpen`, unless it prevents the editor opening it. */
+  private openElementLink = (
+    element: NonDeletedExcalidrawElement,
+    nativeEvent: PointerEvent,
+  ) => {
+    hideHyperlinkToolip();
+    let url = element.link;
+    if (url) {
+      url = normalizeLink(url);
+      let customEvent;
+      if (this.props.onLinkOpen) {
+        customEvent = wrapEvent(EVENT.EXCALIDRAW_LINK, nativeEvent);
+        this.props.onLinkOpen(
+          {
+            ...element,
+            link: url,
+          },
+          customEvent,
+        );
+      }
+      if (!customEvent?.defaultPrevented) {
+        const target = isLocalLink(url) ? "_self" : "_blank";
+        const newWindow = this.ownerWindow.open(undefined, target);
+        // https://mathiasbynens.github.io/rel-noopener/
+        if (newWindow) {
+          newWindow.opener = null;
+          newWindow.location = url;
         }
       }
     }
+  };
+
+  /**
+   * excalidraw-web: notes a press on an unselected element whose link the
+   * host follows on a click, to follow it on release (`finishLinkPress`).
+   */
+  private startLinkPress = (
+    event: React.PointerEvent<HTMLElement>,
+    element: NonDeletedExcalidrawElement,
+  ) => {
+    if (
+      !element.link ||
+      element.locked ||
+      this.isASelectedElement(element) ||
+      event.shiftKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      !this.props.followsLinkOnClick?.(element)
+    ) {
+      return;
+    }
+    this.linkPress = {
+      element,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      timeStamp: event.timeStamp,
+      selectedElementIds: this.state.selectedElementIds,
+      selectedGroupIds: this.state.selectedGroupIds,
+      editingGroupId: this.state.editingGroupId,
+    };
+  };
+
+  /**
+   * excalidraw-web: on releasing a press on an element whose link the host
+   * follows on a click, follows it and puts the selection back as it was,
+   * unless the press moved, held for `LINK_LONG_PRESS_TIMEOUT` (keeping the
+   * element selected), or added to the selection.
+   */
+  private finishLinkPress = (event: PointerEvent) => {
+    const press = this.linkPress;
+    this.linkPress = null;
+    if (!press) {
+      return;
+    }
+    const moved =
+      pointDistance(
+        pointFrom(press.clientX, press.clientY),
+        pointFrom(event.clientX, event.clientY),
+      ) > DRAGGING_THRESHOLD;
+    const held = event.timeStamp - press.timeStamp >= LINK_LONG_PRESS_TIMEOUT;
+    const element = this.scene.getNonDeletedElementsMap().get(press.element.id);
+    if (moved || held || !element?.link || this.state.contextMenu) {
+      return;
+    }
+    this.setState({
+      selectedElementIds: press.selectedElementIds,
+      selectedGroupIds: press.selectedGroupIds,
+      editingGroupId: press.editingGroupId,
+      selectedLinearElement: null,
+    });
+    this.openElementLink(element, event);
   };
 
   /**
@@ -7663,15 +7774,30 @@ class App extends React.Component<AppProps, AppState> {
     ) {
       this.cursor.set(CURSOR_TYPE.POINTER);
 
-      showHyperlinkTooltip(
-        this.hitLinkElement,
-        this.state,
-        this.scene.getNonDeletedElementsMap(),
-      );
+      if (this.props.onLinkHover) {
+        this.reportLinkHover(this.hitLinkElement);
+      } else {
+        showHyperlinkTooltip(
+          this.hitLinkElement,
+          this.state,
+          this.scene.getNonDeletedElementsMap(),
+        );
+      }
       return true;
     }
     hideHyperlinkToolip();
+    this.reportLinkHover(null);
     return false;
+  };
+
+  /** excalidraw-web: tells the host's `onLinkHover` of the linked element under the pointer, when it changes. */
+  private reportLinkHover = (element: NonDeletedExcalidrawElement | null) => {
+    const id = element?.id ?? null;
+    if (id === this.hoveredLinkElementId) {
+      return;
+    }
+    this.hoveredLinkElementId = id;
+    this.props.onLinkHover?.(element);
   };
 
   /**
@@ -8659,6 +8785,7 @@ class App extends React.Component<AppProps, AppState> {
   private handleCanvasPointerDown = (
     event: React.PointerEvent<HTMLElement>,
   ) => {
+    this.linkPress = null;
     if (
       !this.isInteractionEnabled() &&
       !this.isToolSupported(this.state.activeTool.type)
@@ -9160,6 +9287,17 @@ class App extends React.Component<AppProps, AppState> {
       pointerDownState.eventListeners.onUp = onPointerUp;
       pointerDownState.eventListeners.onKeyUp = onKeyUp;
       pointerDownState.eventListeners.onKeyDown = onKeyDown;
+    }
+
+    if (this.linkPress) {
+      // after the press's own release handler, which keeps its selection
+      this.ownerWindow.addEventListener(
+        EVENT.POINTER_UP,
+        this.finishLinkPress,
+        {
+          once: true,
+        },
+      );
     }
   };
 
@@ -9672,6 +9810,7 @@ class App extends React.Component<AppProps, AppState> {
         this.hitLinkElement = this.getElementLinkAtPosition(
           pointerDownState.origin,
           hitElementMightBeLocked,
+          true,
         );
 
         if (this.hitLinkElement) {
@@ -9693,10 +9832,12 @@ class App extends React.Component<AppProps, AppState> {
               y: pointerDownState.origin.y,
             },
             pointerDownState.hit.element,
+            true,
           );
           if (hitLinkElement) {
             return false;
           }
+          this.startLinkPress(event, pointerDownState.hit.element);
         }
 
         // For overlapped elements one position may hit
@@ -13994,6 +14135,7 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionLink,
       actionCopyElementLink,
+      ...(this.props.elementContextMenuItems ?? []),
       CONTEXT_MENU_SEPARATOR,
       actionDuplicateSelection,
       actionToggleElementLock,

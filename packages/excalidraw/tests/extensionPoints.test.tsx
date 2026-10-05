@@ -4,13 +4,25 @@
  * be cropped, stroke colours for elements whose type has none, revising
  * an action's elements within its undo step, and hiding a link's bar; the
  * eyedropper on a canvas it cannot read; the tab the sidebar button
- * opens; and embeds checked again when the host's rule for them changes.
+ * opens; embeds checked again when the host's rule for them changes; and
+ * links the host follows on a click, is told are hovered, draws the icons
+ * of, and adds context menu actions for.
  */
 import React from "react";
+import rough from "roughjs/bin/rough";
 
-import { CODES, KEYS, reseed } from "@excalidraw/common";
+import {
+  CODES,
+  KEYS,
+  LINK_LONG_PRESS_TIMEOUT,
+  reseed,
+} from "@excalidraw/common";
 
-import { CaptureUpdateAction, newElementWith } from "@excalidraw/element";
+import {
+  CaptureUpdateAction,
+  newElementWith,
+  Scene,
+} from "@excalidraw/element";
 
 import type {
   ExcalidrawElement,
@@ -20,6 +32,9 @@ import type {
 } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";
+import { getDefaultAppState } from "../appState";
+import { renderStaticScene } from "../renderer/staticScene";
+import { Renderer } from "../scene/Renderer";
 import { actionToggleCropEditor } from "../actions/actionCropEditor";
 import { actionChangeStrokeColor } from "../actions/actionProperties";
 
@@ -29,13 +44,17 @@ import {
   act,
   fireEvent,
   GlobalTestState,
+  queryByText,
   mockBoundingClientRect,
   render,
   restoreOriginalGetBoundingClientRect,
   waitFor,
 } from "./test-utils";
 
-import type { CustomTool, ExcalidrawProps } from "../types";
+import type { MockInstance } from "vitest";
+
+import type { Action } from "../actions/types";
+import type { AppState, CustomTool, ExcalidrawProps } from "../types";
 
 const { h } = window;
 
@@ -522,6 +541,215 @@ describe("extension points", () => {
         <Excalidraw validateEmbeddable={() => true} renderEmbeddable={hosted} />,
       );
       await waitFor(() => expect(shown()).not.toBeNull());
+    });
+  });
+
+  describe("links", () => {
+    let opened: ReturnType<typeof vi.fn>;
+    let windowOpen: MockInstance<typeof window.open>;
+    const onLinkOpen: NonNullable<ExcalidrawProps["onLinkOpen"]> = (
+      element,
+      event,
+    ) => {
+      opened(element.link);
+      event.preventDefault();
+    };
+
+    beforeEach(() => {
+      opened = vi.fn();
+      windowOpen = vi.spyOn(window, "open").mockReturnValue(null);
+    });
+
+    afterEach(() => {
+      windowOpen.mockRestore();
+      vi.useRealTimers();
+    });
+
+    /** a filled rectangle from (20, 20) to (140, 110), linked to `link` */
+    const addLinkedRectangle = (
+      link: string | null = "https://example.com",
+    ) => {
+      const rectangle = {
+        ...API.createElement({
+          type: "rectangle",
+          x: 20,
+          y: 20,
+          width: 120,
+          height: 90,
+          backgroundColor: "#ffc9c9",
+          fillStyle: "solid",
+        }),
+        link,
+      };
+      API.setElements([rectangle]);
+      return rectangle;
+    };
+
+    describe("followsLinkOnClick", () => {
+      it("follows a link from a click anywhere on the element, leaving nothing selected", async () => {
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        addLinkedRectangle();
+
+        mouse.moveTo(80, 65);
+        mouse.clickAt(80, 65);
+
+        expect(opened).toHaveBeenCalledWith("https://example.com");
+        expect(windowOpen).not.toHaveBeenCalled();
+        expect(h.state.selectedElementIds).toEqual({});
+      });
+
+      it("moves the element when pressed and dragged, and follows nothing", async () => {
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+        const before = h.elements[0].x;
+
+        mouse.moveTo(80, 65);
+        mouse.down();
+        mouse.move(40, 30);
+        mouse.up();
+
+        expect(opened).not.toHaveBeenCalled();
+        expect(h.elements[0].x).toBe(before + 40);
+        expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
+      });
+
+      it("leaves the element selected after a still press held long enough", async () => {
+        vi.useFakeTimers({ toFake: ["Date", "performance"] });
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+
+        mouse.moveTo(80, 65);
+        mouse.down();
+        vi.advanceTimersByTime(LINK_LONG_PRESS_TIMEOUT);
+        mouse.up();
+
+        expect(opened).not.toHaveBeenCalled();
+        expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
+      });
+
+      it("does not follow the link of an element already selected", async () => {
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+        API.setSelectedElements([rectangle]);
+
+        mouse.moveTo(80, 65);
+        mouse.clickAt(80, 65);
+
+        expect(opened).not.toHaveBeenCalled();
+        expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
+      });
+
+      it("selects, as before, an element it answers false for", async () => {
+        await renderEditor({ followsLinkOnClick: () => false, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+
+        mouse.moveTo(80, 65);
+        mouse.clickAt(80, 65);
+
+        expect(opened).not.toHaveBeenCalled();
+        expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
+      });
+    });
+
+    describe("onLinkHover", () => {
+      it("tells of the linked element under the pointer, once, and of none after it", async () => {
+        const hovered = vi.fn();
+        await renderEditor({
+          followsLinkOnClick: () => true,
+          onLinkHover: (element) => hovered(element?.id ?? null),
+        });
+        const rectangle = addLinkedRectangle();
+
+        mouse.moveTo(80, 65);
+        mouse.moveTo(90, 70);
+        mouse.moveTo(300, 300);
+
+        expect(hovered.mock.calls).toEqual([[rectangle.id], [null]]);
+        expect(
+          document.querySelector(".excalidraw-hyperlinkContainer"),
+        ).toBeNull();
+      });
+    });
+
+    describe("linkIcon", () => {
+      it("draws the host's icon at a linked element's corner", () => {
+        const icon = new Image();
+        const rectangle = {
+          ...API.createElement({ type: "rectangle", x: 20, y: 20 }),
+          link: "https://example.com",
+        };
+        const scene = new Scene([rectangle], { skipValidation: true });
+        const renderer = new Renderer(scene);
+        const appState: AppState = {
+          ...getDefaultAppState(),
+          width: 500,
+          height: 500,
+          offsetLeft: 0,
+          offsetTop: 0,
+          scrollX: 0,
+          scrollY: 0,
+        };
+        const { elementsMap, visibleElements } = renderer.getRenderableElements(
+          { ...appState, selectedElements: [] },
+        );
+        const canvas = document.createElement("canvas");
+        const drawImage = vi.spyOn(
+          CanvasRenderingContext2D.prototype,
+          "drawImage",
+        );
+
+        renderStaticScene({
+          canvas,
+          rc: rough.canvas(canvas),
+          scale: 1,
+          elementsMap,
+          allElementsMap: scene.getNonDeletedElementsMap(),
+          visibleElements,
+          appState,
+          renderConfig: {
+            imageCache: new Map(),
+            renderGrid: false,
+            isExporting: false,
+            canvasBackgroundColor: "#fff",
+            embedsValidationStatus: new Map(),
+            elementsPendingErasure: new Set(),
+            pendingFlowchartNodes: null,
+            theme: "light",
+            linkIcon: () => icon,
+          },
+        });
+
+        expect(drawImage.mock.calls.some(([image]) => image === icon)).toBe(
+          true,
+        );
+        drawImage.mockRestore();
+      });
+    });
+
+    describe("elementContextMenuItems", () => {
+      it("adds the host's actions, named in its own words, to an element's menu", async () => {
+        const performed = vi.fn();
+        const select: Action = {
+          name: "hostSelect" as Action["name"],
+          label: "Select",
+          trackEvent: false,
+          perform: () => {
+            performed();
+            return { captureUpdate: CaptureUpdateAction.EVENTUALLY };
+          },
+        };
+        await renderEditor({ elementContextMenuItems: [select] });
+        addLinkedRectangle();
+
+        mouse.rightClickAt(80, 65);
+        const item = queryByText(
+          document.querySelector(".context-menu")! as HTMLElement,
+          "Select",
+        );
+        fireEvent.click(item!);
+
+        expect(performed).toHaveBeenCalled();
+      });
     });
   });
 });

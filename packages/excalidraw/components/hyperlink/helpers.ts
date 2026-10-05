@@ -79,19 +79,22 @@ export const isPointHittingLinkIcon = (
   return hitLink;
 };
 
+/**
+ * Whether a point hits an unselected element's link: anywhere in its bounding
+ * box when `wholeElement`, as in view mode, and otherwise its link icon.
+ */
 export const isPointHittingLink = (
   element: NonDeletedExcalidrawElement,
   elementsMap: ElementsMap,
   appState: AppState,
   [x, y]: GlobalPoint,
-  isMobile: boolean,
+  wholeElement: boolean,
 ) => {
   if (!element.link || appState.selectedElementIds[element.id]) {
     return false;
   }
   if (
-    !isMobile &&
-    appState.viewModeEnabled &&
+    wholeElement &&
     hitElementBoundingBox(pointFrom(x, y), element, elementsMap)
   ) {
     return true;

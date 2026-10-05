@@ -82,17 +82,13 @@ export const ContextMenu = React.memo(
             const actionName = item.name;
             let label = "";
             if (item.label) {
-              if (typeof item.label === "function") {
-                label = t(
-                  item.label(
-                    elements,
-                    appState,
-                    actionManager.app,
-                  ) as unknown as TranslationKeys,
-                );
-              } else {
-                label = t(item.label as unknown as TranslationKeys);
-              }
+              // excalidraw-web: a host's action names itself, in words no
+              // translation has
+              const key =
+                typeof item.label === "function"
+                  ? item.label(elements, appState, actionManager.app)
+                  : item.label;
+              label = t(key as unknown as TranslationKeys, null, key);
             }
 
             return (

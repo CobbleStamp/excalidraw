@@ -77,6 +77,10 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     imageExportOptions,
     prepareExportFiles,
     hidesLinkInfo,
+    followsLinkOnClick,
+    onLinkHover,
+    linkIcon,
+    elementContextMenuItems,
     defaultSidebarTab,
     // excalidraw-web: the host's own sections of the library panel
     librarySections,
@@ -232,6 +236,10 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           imageExportOptions={imageExportOptions}
           prepareExportFiles={prepareExportFiles}
           hidesLinkInfo={hidesLinkInfo}
+          followsLinkOnClick={followsLinkOnClick}
+          onLinkHover={onLinkHover}
+          linkIcon={linkIcon}
+          elementContextMenuItems={elementContextMenuItems}
           defaultSidebarTab={defaultSidebarTab}
           // excalidraw-web: the host's own sections of the library panel
           librarySections={librarySections}
