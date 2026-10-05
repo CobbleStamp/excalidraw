@@ -4331,6 +4331,11 @@ class App extends React.Component<AppProps, AppState> {
 
     this.appStateObserver.flush(prevState);
 
+    // a host whose rule for embeds changed has every embed checked again,
+    // as when it learns of more sites to trust after the scene opened
+    if (prevProps.validateEmbeddable !== this.props.validateEmbeddable) {
+      this.embedsValidationStatus.clear();
+    }
     this.updateEmbeddables();
     const elements = this.scene.getElementsIncludingDeleted();
     const elementsMap = this.scene.getElementsMapIncludingDeleted();
