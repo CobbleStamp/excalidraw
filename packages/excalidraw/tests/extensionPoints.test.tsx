@@ -654,6 +654,42 @@ describe("extension points", () => {
         expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
       });
 
+      it("follows a link once on a tap inside an unfilled shape", async () => {
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+        API.updateElement(rectangle, { backgroundColor: "transparent" });
+        const finger = new Pointer("touch");
+
+        finger.downAt(80, 65);
+        finger.upAt(80, 65);
+
+        expect(opened).toHaveBeenCalledTimes(1);
+      });
+
+      it("keeps a selected arrow's editing when a click follows a link elsewhere", async () => {
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+        const arrow = API.createElement({
+          type: "arrow",
+          x: 300,
+          y: 300,
+          width: 100,
+          height: 0,
+        });
+        API.setElements([rectangle, arrow]);
+        API.setSelectedElements([arrow]);
+        const editing = h.state.selectedLinearElement;
+
+        mouse.moveTo(80, 65);
+        mouse.clickAt(80, 65);
+
+        expect(opened).toHaveBeenCalled();
+        expect(h.state.selectedElementIds).toEqual({ [arrow.id]: true });
+        expect(h.state.selectedLinearElement?.elementId).toBe(
+          editing?.elementId,
+        );
+      });
+
       it("does not follow the link of an element already selected", async () => {
         await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
         const rectangle = addLinkedRectangle();
@@ -692,6 +728,11 @@ describe("extension points", () => {
         mouse.moveTo(300, 300);
 
         expect(hovered.mock.calls).toEqual([[rectangle.id], [null]]);
+
+        // leaving the canvas onto the editor's own UI leaves no link hovered
+        mouse.moveTo(80, 65);
+        fireEvent.pointerLeave(GlobalTestState.interactiveCanvas);
+        expect(hovered.mock.calls.slice(2)).toEqual([[rectangle.id], [null]]);
         expect(
           document.querySelector(".excalidraw-hyperlinkContainer"),
         ).toBeNull();

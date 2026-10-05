@@ -760,6 +760,7 @@ class App extends React.Component<AppProps, AppState> {
     selectedElementIds: AppState["selectedElementIds"];
     selectedGroupIds: AppState["selectedGroupIds"];
     editingGroupId: AppState["editingGroupId"];
+    selectedLinearElement: AppState["selectedLinearElement"];
   } | null = null;
   lastPointerDownEvent: React.PointerEvent<HTMLElement> | null = null;
   /**
@@ -2783,6 +2784,7 @@ class App extends React.Component<AppProps, AppState> {
                             onPointerMove={this.handleCanvasPointerMove}
                             onPointerUp={this.handleCanvasPointerUp}
                             onPointerCancel={this.removePointer}
+                            onPointerLeave={this.handleCanvasPointerLeave}
                             onTouchMove={this.handleTouchMove}
                             onPointerDown={this.handleCanvasPointerDown}
                             onDoubleClick={this.handleCanvasDoubleClick}
@@ -7732,6 +7734,7 @@ class App extends React.Component<AppProps, AppState> {
       selectedElementIds: this.state.selectedElementIds,
       selectedGroupIds: this.state.selectedGroupIds,
       editingGroupId: this.state.editingGroupId,
+      selectedLinearElement: this.state.selectedLinearElement,
     };
   };
 
@@ -7760,8 +7763,8 @@ class App extends React.Component<AppProps, AppState> {
     if (held) {
       // a press inside an unfilled shape selected nothing of its own
       if (!this.isASelectedElement(element)) {
-        this.setState(
-          selectGroupsForSelectedElements(
+        this.setState({
+          ...selectGroupsForSelectedElements(
             {
               editingGroupId: this.state.editingGroupId,
               selectedElementIds: { [element.id]: true },
@@ -7770,7 +7773,8 @@ class App extends React.Component<AppProps, AppState> {
             this.state,
             this,
           ),
-        );
+          showHyperlinkPopup: false,
+        });
       }
       return;
     }
@@ -7778,7 +7782,7 @@ class App extends React.Component<AppProps, AppState> {
       selectedElementIds: press.selectedElementIds,
       selectedGroupIds: press.selectedGroupIds,
       editingGroupId: press.editingGroupId,
-      selectedLinearElement: null,
+      selectedLinearElement: press.selectedLinearElement,
     });
     this.openElementLink(element, event);
   };
@@ -7811,6 +7815,11 @@ class App extends React.Component<AppProps, AppState> {
     return false;
   };
 
+  /** excalidraw-web: the pointer left the canvas, onto the editor's UI or out of the window: no linked element is under it. */
+  private handleCanvasPointerLeave = () => {
+    this.reportLinkHover(null);
+  };
+
   /** excalidraw-web: tells the host's `onLinkHover` of the linked element under the pointer, when it changes. */
   private reportLinkHover = (element: NonDeletedExcalidrawElement | null) => {
     const id = element?.id ?? null;
@@ -7830,6 +7839,11 @@ class App extends React.Component<AppProps, AppState> {
     event: React.PointerEvent<HTMLCanvasElement>,
     scenePointer: { x: number; y: number },
   ): boolean => {
+    // excalidraw-web: a press the host follows links of is followed on its
+    // release by `finishLinkPress`, once
+    if (this.linkPress) {
+      return false;
+    }
     if (this.editorInterface.isTouchScreen) {
       const hitElement = this.getElementAtPosition(
         scenePointer.x,

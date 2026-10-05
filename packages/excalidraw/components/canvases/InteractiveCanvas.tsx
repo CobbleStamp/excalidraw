@@ -69,6 +69,8 @@ type InteractiveCanvasProps = {
     DOMAttributes<HTMLCanvasElement>["onPointerCancel"],
     undefined
   >;
+  /** excalidraw-web: the pointer left the canvas, for what was under it there */
+  onPointerLeave?: DOMAttributes<HTMLCanvasElement>["onPointerLeave"];
   onTouchMove: Exclude<
     DOMAttributes<HTMLCanvasElement>["onTouchMove"],
     undefined
@@ -217,6 +219,7 @@ const InteractiveCanvas = (props: InteractiveCanvasProps) => {
       onPointerMove={props.onPointerMove}
       onPointerUp={props.onPointerUp}
       onPointerCancel={props.onPointerCancel}
+      onPointerLeave={props.onPointerLeave}
       onTouchMove={props.onTouchMove}
       onPointerDown={props.onPointerDown}
       onDoubleClick={
