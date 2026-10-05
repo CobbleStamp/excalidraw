@@ -7738,7 +7738,7 @@ class App extends React.Component<AppProps, AppState> {
   /**
    * excalidraw-web: on releasing a press on an element whose link the host
    * follows on a click, follows it and puts the selection back as it was,
-   * unless the press moved, held for `LINK_LONG_PRESS_TIMEOUT` (keeping the
+   * unless the press moved, held for `LINK_LONG_PRESS_TIMEOUT` (leaving the
    * element selected), or added to the selection.
    */
   private finishLinkPress = (event: PointerEvent) => {
@@ -7754,7 +7754,24 @@ class App extends React.Component<AppProps, AppState> {
       ) > DRAGGING_THRESHOLD;
     const held = event.timeStamp - press.timeStamp >= LINK_LONG_PRESS_TIMEOUT;
     const element = this.scene.getNonDeletedElementsMap().get(press.element.id);
-    if (moved || held || !element?.link || this.state.contextMenu) {
+    if (moved || !element?.link || this.state.contextMenu) {
+      return;
+    }
+    if (held) {
+      // a press inside an unfilled shape selected nothing of its own
+      if (!this.isASelectedElement(element)) {
+        this.setState(
+          selectGroupsForSelectedElements(
+            {
+              editingGroupId: this.state.editingGroupId,
+              selectedElementIds: { [element.id]: true },
+            },
+            this.scene.getNonDeletedElements(),
+            this.state,
+            this,
+          ),
+        );
+      }
       return;
     }
     this.setState({
@@ -9841,7 +9858,18 @@ class App extends React.Component<AppProps, AppState> {
           if (hitLinkElement) {
             return false;
           }
-          this.startLinkPress(event, pointerDownState.hit.element);
+        }
+
+        // the linked element pressed: the one hit, or, through an unfilled
+        // shape's inside, the one whose link covers the point
+        const pressedLinkElement = pointerDownState.hit.element?.link
+          ? pointerDownState.hit.element
+          : this.getElementLinkAtPosition(
+              pointerDownState.origin,
+              hitElementMightBeLocked,
+            );
+        if (pressedLinkElement) {
+          this.startLinkPress(event, pressedLinkElement);
         }
 
         // For overlapped elements one position may hit

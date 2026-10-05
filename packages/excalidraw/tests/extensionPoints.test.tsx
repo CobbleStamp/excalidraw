@@ -636,6 +636,24 @@ describe("extension points", () => {
         expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
       });
 
+      it("follows the link of an unfilled shape pressed inside, and selects it on a held press", async () => {
+        vi.useFakeTimers({ toFake: ["Date", "performance"] });
+        await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
+        const rectangle = addLinkedRectangle();
+        API.updateElement(rectangle, { backgroundColor: "transparent" });
+
+        mouse.moveTo(80, 65);
+        mouse.clickAt(80, 65);
+        expect(opened).toHaveBeenCalledWith("https://example.com");
+        expect(h.state.selectedElementIds).toEqual({});
+
+        mouse.down();
+        vi.advanceTimersByTime(LINK_LONG_PRESS_TIMEOUT);
+        mouse.up();
+        expect(opened).toHaveBeenCalledTimes(1);
+        expect(h.state.selectedElementIds).toEqual({ [rectangle.id]: true });
+      });
+
       it("does not follow the link of an element already selected", async () => {
         await renderEditor({ followsLinkOnClick: () => true, onLinkOpen });
         const rectangle = addLinkedRectangle();
