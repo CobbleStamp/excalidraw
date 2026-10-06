@@ -85,6 +85,9 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     defaultSidebarTab,
     // excalidraw-web: the host's own sections of the library panel
     librarySections,
+    transformHandlesOf,
+    refusesDrag,
+    entersGroupOnClick,
     className,
     ownerDocument = document,
     onChange,
@@ -245,6 +248,9 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           defaultSidebarTab={defaultSidebarTab}
           // excalidraw-web: the host's own sections of the library panel
           librarySections={librarySections}
+          transformHandlesOf={transformHandlesOf}
+          refusesDrag={refusesDrag}
+          entersGroupOnClick={entersGroupOnClick}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

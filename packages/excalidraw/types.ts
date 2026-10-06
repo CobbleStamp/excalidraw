@@ -12,6 +12,7 @@ import type { LinearElementEditor } from "@excalidraw/element";
 import type { MaybeTransformHandleType } from "@excalidraw/element";
 
 import type {
+  ExcalidrawTextContainer,
   PointerType,
   ExcalidrawLinearElement,
   NonDeletedExcalidrawElement,
@@ -1184,6 +1185,26 @@ export interface ExcalidrawProps {
    * above the library's items while it is not being searched.
    */
   librarySections?: React.ReactNode;
+  /**
+   * excalidraw-web: which of the selection's transform handles are offered:
+   * all of them (the default), only rotation, or none. Handles not offered
+   * are neither drawn nor grabbed.
+   */
+  transformHandlesOf?: (
+    selectedElements: readonly NonDeletedExcalidrawElement[],
+  ) => "all" | "rotation" | "none";
+  /**
+   * excalidraw-web: true refuses moving the selection by pressing and
+   * dragging it, or by the arrow keys.
+   */
+  refusesDrag?: (
+    selectedElements: readonly NonDeletedExcalidrawElement[],
+  ) => boolean;
+  /**
+   * excalidraw-web: true makes a click on a member of an already-selected
+   * group select that member alone, as a double-click does.
+   */
+  entersGroupOnClick?: (element: NonDeletedExcalidrawElement) => boolean;
 }
 
 /** The files a PNG export draws, given those the scene holds and the elements exported. */
@@ -1481,6 +1502,14 @@ export type ExcalidrawImperativeAPIEventMap = {
 export interface ExcalidrawImperativeAPI {
   /** Whether the editor has been unmounted and the API is no longer usable. */
   isDestroyed: boolean;
+  /**
+   * excalidraw-web: opens a text container's text for editing with the caret
+   * at its end, its text replaced by `replaceWith` when given.
+   */
+  startTextEditing: (
+    container: ExcalidrawTextContainer,
+    replaceWith?: string,
+  ) => void;
   updateScene: InstanceType<typeof App>["updateScene"];
   // excalidraw-web: adds elements as pasting does: fresh ids, attachments
   // and groups kept, placed at a point, selected, as one undo step

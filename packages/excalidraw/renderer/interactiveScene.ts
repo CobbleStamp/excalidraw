@@ -1936,6 +1936,16 @@ const _renderInteractiveScene = ({
     context.save();
     context.translate(appState.scrollX, appState.scrollY);
 
+    // excalidraw-web: the handles the host offers for this selection
+    const offeredHandles =
+      app.props.transformHandlesOf?.(selectedElements) ?? "all";
+    const offered = (handles: TransformHandles): TransformHandles =>
+      offeredHandles === "all"
+        ? handles
+        : offeredHandles === "rotation" && handles.rotation
+        ? { rotation: handles.rotation }
+        : {};
+
     if (selectedElements.length === 1) {
       context.fillStyle = getThemedColor("#fff", appState.theme);
       const transformHandles = getTransformHandles(
@@ -1957,7 +1967,7 @@ const _renderInteractiveScene = ({
           context,
           renderConfig,
           appState,
-          transformHandles,
+          offered(transformHandles),
           selectedElements[0].angle,
         );
       }
@@ -2018,7 +2028,7 @@ const _renderInteractiveScene = ({
           context,
           renderConfig,
           appState,
-          transformHandles,
+          offered(transformHandles),
           0,
         );
       }

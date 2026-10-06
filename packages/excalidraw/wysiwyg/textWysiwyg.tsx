@@ -214,6 +214,7 @@ export const textWysiwyg = ({
   app,
   autoSelect = true,
   initialCaretSceneCoords = null,
+  startAtEnd = null,
 }: {
   /**
    * textWysiwyg only deals with `originalText`
@@ -230,6 +231,8 @@ export const textWysiwyg = ({
   app: App;
   autoSelect?: boolean;
   initialCaretSceneCoords?: { x: number; y: number } | null;
+  /** excalidraw-web: start with the caret at the end, the text replaced when given */
+  startAtEnd?: { text?: string } | null;
 }): SubmitHandler => {
   const ownerDocument = excalidrawContainer?.ownerDocument ?? document;
   const ownerWindow = ownerDocument.defaultView ?? window;
@@ -500,7 +503,7 @@ export const textWysiwyg = ({
     overflowWrap: "break-word",
     boxSizing: "content-box",
   });
-  editable.value = element.originalText;
+  editable.value = startAtEnd?.text ?? element.originalText;
   updateWysiwygStyle();
 
   const getCaretIndexFromInitialSceneCoords = () => {
@@ -1042,7 +1045,12 @@ export const textWysiwyg = ({
 
   let isDestroyed = false;
 
-  if (autoSelect && !pendingInitialSelection) {
+  if (startAtEnd) {
+    editable.setSelectionRange(editable.value.length, editable.value.length);
+    if (startAtEnd.text !== undefined) {
+      onChange?.(editable.value);
+    }
+  } else if (autoSelect && !pendingInitialSelection) {
     // select on init (focusing is done separately inside the bindBlurEvent()
     // because we need it to happen *after* the blur event from `pointerdown`)
     editable.select();
