@@ -227,6 +227,7 @@ import {
   getResizeOffsetXY,
   getResizeArrowDirection,
   transformElements,
+  rotateContainedElements,
   getCursorForResizingElement,
   getElementWithTransformHandleType,
   getTransformHandleTypeFromCoords,
@@ -7607,6 +7608,44 @@ class App extends React.Component<AppProps, AppState> {
     ];
   };
 
+  /**
+   * excalidraw-web: what the rotating selection's containers hold turns with
+   * them, about the selection's centre by the angle it has turned.
+   */
+  private rotateContainedElements = (
+    pointerDownState: PointerDownState,
+    selectedElements: readonly NonDeletedExcalidrawElement[],
+  ) => {
+    const turning = selectedElements.find(
+      (element) => !isFrameLikeElement(element),
+    );
+    const original =
+      turning && pointerDownState.originalElements.get(turning.id);
+    if (!turning || !original) {
+      return;
+    }
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    const [x1, y1, x2, y2] = getElementAbsoluteCoords(original, elementsMap);
+    const center =
+      selectedElements.length === 1
+        ? pointFrom<GlobalPoint>((x1 + x2) / 2, (y1 + y2) / 2)
+        : pointFrom<GlobalPoint>(
+            pointerDownState.resize.center.x,
+            pointerDownState.resize.center.y,
+          );
+    rotateContainedElements(
+      pointerDownState.originalElements,
+      getElementsContainedInDrag(
+        pointerDownState,
+        selectedElements,
+        this.scene,
+      ),
+      center,
+      (turning.angle - original.angle) as Radians,
+      this.scene,
+    );
+  };
+
   /** excalidraw-web: whether the host offers this transform handle of the selection */
   private isTransformHandleOffered = (
     selectedElements: readonly NonDeletedExcalidrawElement[],
@@ -14149,6 +14188,9 @@ class App extends React.Component<AppProps, AppState> {
         pointerDownState.resize.center.y,
       )
     ) {
+      if (transformHandleType === "rotation") {
+        this.rotateContainedElements(pointerDownState, selectedElements);
+      }
       const elementsToHighlight = new Set<NonDeletedExcalidrawElement>();
       selectedFrames.forEach((frame) => {
         getElementsInResizingFrame(
