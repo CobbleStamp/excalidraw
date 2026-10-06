@@ -197,13 +197,15 @@ export const copyToClipboard = async (
   files: BinaryFiles | null,
   /** supply if available to make the operation more certain to succeed */
   clipboardEvent?: ClipboardEvent | null,
+  /** excalidraw-web: plain text for other apps, in place of the JSON */
+  plainText?: string,
 ) => {
   const json = serializeAsClipboardJSON({ elements, files });
 
   await copyTextToSystemClipboard(
     {
       [MIME_TYPES.excalidrawClipboard]: json,
-      [MIME_TYPES.text]: json,
+      [MIME_TYPES.text]: plainText ?? json,
     },
     clipboardEvent,
   );
@@ -536,7 +538,10 @@ export const parseClipboard = async (
   }
 
   try {
-    const systemClipboardData = JSON.parse(parsedEventData.value);
+    // excalidraw-web: the elements under the editor's own type, when their
+    // plain text is for other apps
+    const ownData = dataList.getData(MIME_TYPES.excalidrawClipboard);
+    const systemClipboardData = JSON.parse(ownData || parsedEventData.value);
     const programmaticAPI =
       systemClipboardData.type === EXPORT_DATA_TYPES.excalidrawClipboardWithAPI;
     if (clipboardContainsElements(systemClipboardData)) {
@@ -544,7 +549,9 @@ export const parseClipboard = async (
         elements: systemClipboardData.elements,
         files: systemClipboardData.files,
         text: isPlainPaste
-          ? JSON.stringify(systemClipboardData.elements, null, 2)
+          ? ownData && ownData !== parsedEventData.value
+            ? parsedEventData.value
+            : JSON.stringify(systemClipboardData.elements, null, 2)
           : undefined,
         programmaticAPI,
       };

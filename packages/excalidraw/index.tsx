@@ -89,6 +89,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     refusesDrag,
     entersGroupOnClick,
     shapePanelSections,
+    clipboardTextOf,
     className,
     ownerDocument = document,
     onChange,
@@ -253,6 +254,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           refusesDrag={refusesDrag}
           entersGroupOnClick={entersGroupOnClick}
           shapePanelSections={shapePanelSections}
+          clipboardTextOf={clipboardTextOf}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

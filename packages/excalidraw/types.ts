@@ -1212,6 +1212,15 @@ export interface ExcalidrawProps {
   shapePanelSections?: (
     selectedElements: readonly NonDeletedExcalidrawElement[],
   ) => React.ReactNode;
+  /**
+   * excalidraw-web: the plain text a copy of these elements puts on the
+   * clipboard for other apps, in place of the elements' JSON, which then
+   * travels only under the editor's own clipboard type; the JSON when it
+   * returns null.
+   */
+  clipboardTextOf?: (
+    copiedElements: readonly NonDeletedExcalidrawElement[],
+  ) => string | null;
 }
 
 /** The files a PNG export draws, given those the scene holds and the elements exported. */
