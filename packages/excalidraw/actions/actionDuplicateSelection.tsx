@@ -18,8 +18,9 @@ import { syncMovedIndices } from "@excalidraw/element";
 
 import {
   duplicateElements,
+  getCommonBounds,
   getContainedElements,
-  getElementsToDuplicate,
+  getElementsWithContents,
 } from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
@@ -76,11 +77,25 @@ export const actionDuplicateSelection = register({
       app.scene.getNonDeletedElements(),
       elementsMap,
     );
-    const idsOfElementsToDuplicate = getElementsToDuplicate(
+    const idsOfElementsToDuplicate = getElementsWithContents(
       selectedElements,
       containedElements,
       elementsMap,
     );
+
+    // excalidraw-web: a copy that holds contents is placed clear of the
+    // original, to its right, so nothing lies inside both and a drag of the
+    // copy leaves the original's contents behind
+    const [offsetX, offsetY] = (() => {
+      if (containedElements.length === 0) {
+        return [DEFAULT_GRID_SIZE / 2, DEFAULT_GRID_SIZE / 2];
+      }
+      const [minX, , maxX] = getCommonBounds(
+        Array.from(idsOfElementsToDuplicate.values()),
+        elementsMap,
+      );
+      return [maxX - minX + DEFAULT_GRID_SIZE, 0];
+    })();
 
     const duplication = duplicateElements({
       type: "in-place",
@@ -92,8 +107,8 @@ export const actionDuplicateSelection = register({
         const duplicateFrameId =
           origElement.frameId && origIdToDuplicateId.get(origElement.frameId);
         return {
-          x: origElement.x + DEFAULT_GRID_SIZE / 2,
-          y: origElement.y + DEFAULT_GRID_SIZE / 2,
+          x: origElement.x + offsetX,
+          y: origElement.y + offsetY,
           frameId: duplicateFrameId ?? origElement.frameId,
         };
       },

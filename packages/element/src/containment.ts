@@ -260,12 +260,12 @@ export const getContainedElements = (
 };
 
 /**
- * What duplicating `selectedElements` copies: those, and the elements lying
- * inside the containers among them (`containedElements`, from
- * `getContainedElements`) with their bound text, so a duplicated container
- * is a full copy however it is duplicated.
+ * What duplicating, copying or cutting `selectedElements` takes: those, and
+ * the elements lying inside the containers among them (`containedElements`,
+ * from `getContainedElements`) with their bound text, so a container is
+ * copied whole however it is copied.
  */
-export const getElementsToDuplicate = (
+export const getElementsWithContents = (
   selectedElements: readonly NonDeletedExcalidrawElement[],
   containedElements: readonly NonDeletedExcalidrawElement[],
   elementsMap: ElementsMap,

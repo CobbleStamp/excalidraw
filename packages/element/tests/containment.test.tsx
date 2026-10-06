@@ -1,13 +1,24 @@
 import React from "react";
 
-import { KEYS, reseed } from "@excalidraw/common";
+import {
+  DEFAULT_GRID_SIZE,
+  KEYS,
+  MIME_TYPES,
+  reseed,
+} from "@excalidraw/common";
 import { Excalidraw } from "@excalidraw/excalidraw";
+import {
+  actionCopy,
+  actionCut,
+} from "@excalidraw/excalidraw/actions/actionClipboard";
 
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { Keyboard, Pointer, UI } from "@excalidraw/excalidraw/tests/helpers/ui";
 import {
+  act,
   render,
   unmountComponent,
+  waitFor,
 } from "@excalidraw/excalidraw/tests/test-utils";
 
 import { arrayToMap } from "@excalidraw/common";
@@ -599,18 +610,102 @@ describe("moving a container moves what it contains", () => {
     const copies = live.filter(
       (element) => element.id !== container.id && element.id !== text.id,
     );
-    // one full copy, offset by half a grid step, as Ctrl+D places copies
+    // one full copy, clear of the original, to its right, so a drag of the
+    // copy leaves the original's contents behind
     expect(copies.map((element) => element.type).sort()).toEqual([
       "rectangle",
       "text",
     ]);
+    const copiedContainer = copies.find(
+      (element) => element.type === "rectangle",
+    )!;
     const copiedText = copies.find((element) => element.type === "text")!;
-    expect(copiedText.x - text.x).toBe(
-      copies.find((element) => element.type === "rectangle")!.x - container.x,
-    );
+    expect([copiedContainer.x, copiedContainer.y]).toEqual([
+      container.x + container.width + DEFAULT_GRID_SIZE,
+      container.y,
+    ]);
+    expect([copiedText.x - text.x, copiedText.y - text.y]).toEqual([
+      copiedContainer.x - container.x,
+      0,
+    ]);
     expect(Object.keys(h.state.selectedElementIds).sort()).toEqual(
       copies.map((element) => element.id).sort(),
     );
+  });
+
+  it("duplicating an empty container with Ctrl+D keeps the half-grid offset", () => {
+    const container = makeContainer();
+    API.setElements([container]);
+    API.setSelectedElements([container]);
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      Keyboard.keyPress(KEYS.D);
+    });
+
+    const copy = h.elements.find(
+      (element) => element.id !== container.id && !element.isDeleted,
+    )!;
+    expect([copy.x, copy.y]).toEqual([
+      DEFAULT_GRID_SIZE / 2,
+      DEFAULT_GRID_SIZE / 2,
+    ]);
+  });
+
+  it("copying a container copies what lies inside it", async () => {
+    const container = makeContainer();
+    const text = makeTextInside();
+    const outside = API.createElement({
+      id: "outside",
+      type: "rectangle",
+      x: 400,
+      y: 0,
+      width: 50,
+      height: 50,
+    });
+    API.setElements([container, text, outside]);
+    API.setSelectedElements([container]);
+
+    const event = new ClipboardEvent("copy", {
+      clipboardData: new DataTransfer(),
+    });
+    act(() => {
+      h.app.actionManager.executeAction(actionCopy, "keyboard", event);
+    });
+    await waitFor(() =>
+      expect(
+        event.clipboardData?.getData(MIME_TYPES.excalidrawClipboard),
+      ).not.toBe(""),
+    );
+
+    const copied = JSON.parse(
+      event.clipboardData!.getData(MIME_TYPES.excalidrawClipboard),
+    ).elements.map((element: ExcalidrawElement) => element.id);
+    expect(copied).toEqual([container.id, text.id]);
+  });
+
+  it("cutting a container cuts what lies inside it", () => {
+    const container = makeContainer();
+    const text = makeTextInside();
+    const outside = API.createElement({
+      id: "outside",
+      type: "rectangle",
+      x: 400,
+      y: 0,
+      width: 50,
+      height: 50,
+    });
+    API.setElements([container, text, outside]);
+    API.setSelectedElements([container]);
+
+    act(() => {
+      h.app.actionManager.executeAction(actionCut, "keyboard", null);
+    });
+
+    expect(
+      h.elements
+        .filter((element) => !element.isDeleted)
+        .map((element) => element.id),
+    ).toEqual([outside.id]);
   });
 
   it("keeps dragging when alt-drag duplicates the selection", () => {

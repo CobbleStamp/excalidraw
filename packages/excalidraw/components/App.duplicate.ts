@@ -15,7 +15,7 @@ import {
   filterElementsEligibleAsFrameChildren,
   getCommonBounds,
   getContainedElements,
-  getElementsToDuplicate,
+  getElementsWithContents,
   getSelectionStateForElements,
   isBindableElement,
   newElementWith,
@@ -202,7 +202,7 @@ export class AppDuplicate {
       this.app.scene.getNonDeletedElements(),
       elementsMap,
     );
-    const idsOfElementsToDuplicate = getElementsToDuplicate(
+    const idsOfElementsToDuplicate = getElementsWithContents(
       selectedElements,
       containedElements,
       elementsMap,
