@@ -9,6 +9,7 @@ import { fixBindingsAfterDeletion } from "@excalidraw/element";
 import { LinearElementEditor } from "@excalidraw/element";
 import { newElementWith } from "@excalidraw/element";
 import { getContainerElement } from "@excalidraw/element";
+import { getContainedElements } from "@excalidraw/element";
 import {
   isBoundToContainer,
   isElbowArrow,
@@ -272,8 +273,30 @@ export const actionDeleteSelected = register({
       };
     }
 
+    // excalidraw-web: deleting a container deletes what lies inside it, as
+    // copying and duplicating it copy that too
+    const containedElements = getContainedElements(
+      app.scene.getSelectedElements({
+        selectedElementIds: appState.selectedElementIds,
+      }),
+      app.scene.getNonDeletedElements(),
+      app.scene.getNonDeletedElementsMap(),
+    );
+    const appStateWithContents: AppState =
+      containedElements.length === 0
+        ? appState
+        : {
+            ...appState,
+            selectedElementIds: {
+              ...appState.selectedElementIds,
+              ...Object.fromEntries(
+                containedElements.map((element) => [element.id, true as const]),
+              ),
+            },
+          };
+
     let { elements: nextElements, appState: nextAppState } =
-      deleteSelectedElements(elements, appState, app);
+      deleteSelectedElements(elements, appStateWithContents, app);
 
     fixBindingsAfterDeletion(
       nextElements,

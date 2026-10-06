@@ -1,4 +1,8 @@
-import { isTextElement } from "@excalidraw/element";
+import {
+  getContainedElements,
+  getElementsWithContents,
+  isTextElement,
+} from "@excalidraw/element";
 import { getTextFromElements } from "@excalidraw/element";
 
 import { CODES, KEYS, isFirefox } from "@excalidraw/common";
@@ -20,17 +24,44 @@ import { t } from "../i18n";
 import { actionDeleteSelected } from "./actionDeleteSelected";
 import { register } from "./register";
 
+import type { AppClassProperties, AppState } from "../types";
+
+/**
+ * excalidraw-web: the selection with what lies inside its containers, and
+ * their bound text, in stacking order: what copy takes, as duplicating does
+ * (and deleting, so cut takes it too).
+ */
+const getSelectionWithContents = (
+  appState: AppState,
+  app: AppClassProperties,
+) => {
+  const selectedElements = app.scene.getSelectedElements({
+    selectedElementIds: appState.selectedElementIds,
+    includeBoundTextElement: true,
+    includeElementsInFrames: true,
+  });
+  const elementsMap = app.scene.getNonDeletedElementsMap();
+  const taken = getElementsWithContents(
+    selectedElements,
+    getContainedElements(
+      selectedElements,
+      app.scene.getNonDeletedElements(),
+      elementsMap,
+    ),
+    elementsMap,
+  );
+  return app.scene
+    .getNonDeletedElements()
+    .filter((element) => taken.has(element.id));
+};
+
 export const actionCopy = register<ClipboardEvent | null>({
   name: "copy",
   label: "labels.copy",
   icon: DuplicateIcon,
   trackEvent: { category: "element" },
   perform: async (elements, appState, event, app) => {
-    const elementsToCopy = app.scene.getSelectedElements({
-      selectedElementIds: appState.selectedElementIds,
-      includeBoundTextElement: true,
-      includeElementsInFrames: true,
-    });
+    const elementsToCopy = getSelectionWithContents(appState, app);
 
     try {
       await copyToClipboard(

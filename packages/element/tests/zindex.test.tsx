@@ -952,7 +952,9 @@ describe("z-index manipulation", () => {
     populateElements([
       { id: "A", groupIds: ["g1"], isSelected: true },
       { id: "B", groupIds: ["g1"], isSelected: true },
-      { id: "C" },
+      // excalidraw-web: apart, so it is not inside a duplicated container,
+      // which Ctrl+D copies with its contents
+      { id: "C", x: 300 },
     ]);
     API.executeAction(actionDuplicateSelection);
     expect(h.elements).toMatchObject([
@@ -1073,11 +1075,13 @@ describe("z-index manipulation", () => {
       getCloneByOrigId("F").id,
     ]);
 
+    // excalidraw-web: the unselected elements lie apart, so none is inside a
+    // duplicated container, which Ctrl+D copies with its contents
     populateElements(
       [
         { id: "A", groupIds: ["g1", "g2"], isSelected: true },
-        { id: "B", groupIds: ["g1", "g2"] },
-        { id: "C", groupIds: ["g2"] },
+        { id: "B", groupIds: ["g1", "g2"], x: 300 },
+        { id: "C", groupIds: ["g2"], x: 300 },
       ],
       { editingGroupId: "g1" },
     );
@@ -1091,9 +1095,9 @@ describe("z-index manipulation", () => {
 
     populateElements(
       [
-        { id: "A", groupIds: ["g1", "g2"] },
+        { id: "A", groupIds: ["g1", "g2"], x: 300 },
         { id: "B", groupIds: ["g1", "g2"], isSelected: true },
-        { id: "C", groupIds: ["g2"] },
+        { id: "C", groupIds: ["g2"], x: 300 },
       ],
       { editingGroupId: "g1" },
     );
@@ -1109,7 +1113,7 @@ describe("z-index manipulation", () => {
       [
         { id: "A", groupIds: ["g1", "g2"], isSelected: true },
         { id: "B", groupIds: ["g1", "g2"], isSelected: true },
-        { id: "C", groupIds: ["g2"] },
+        { id: "C", groupIds: ["g2"], x: 300 },
       ],
       { editingGroupId: "g1" },
     );
@@ -1126,7 +1130,8 @@ describe("z-index manipulation", () => {
   it("duplicating incorrectly interleaved elements (group elements should be together) should still produce reasonable result", () => {
     populateElements([
       { id: "A", groupIds: ["g1"], isSelected: true },
-      { id: "B" },
+      // excalidraw-web: apart, so it is not inside a duplicated container
+      { id: "B", x: 300 },
       { id: "C", groupIds: ["g1"], isSelected: true },
     ]);
     API.executeAction(actionDuplicateSelection);
@@ -1144,7 +1149,8 @@ describe("z-index manipulation", () => {
       { id: "A", groupIds: ["g1"], isDeleted: true },
       { id: "B", groupIds: ["g1"], isSelected: true },
       { id: "C", groupIds: ["g1"], isSelected: true },
-      { id: "D" },
+      // excalidraw-web: apart, so it is not inside a duplicated container
+      { id: "D", x: 300 },
     ]);
     expect(h.state.selectedGroupIds).toEqual({ g1: true });
     API.executeAction(actionDuplicateSelection);

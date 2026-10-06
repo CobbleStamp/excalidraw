@@ -13,9 +13,9 @@ import {
   deepCopyElement,
   duplicateElements,
   filterElementsEligibleAsFrameChildren,
-  getBoundTextElement,
   getCommonBounds,
   getContainedElements,
+  getElementsWithContents,
   getSelectionStateForElements,
   isBindableElement,
   newElementWith,
@@ -202,14 +202,10 @@ export class AppDuplicate {
       this.app.scene.getNonDeletedElements(),
       elementsMap,
     );
-    const containedBoundTexts = containedElements
-      .map((element) => getBoundTextElement(element, elementsMap))
-      .filter((text): text is NonNullable<typeof text> => !!text);
-
-    const idsOfElementsToDuplicate = new Map(
-      [...selectedElements, ...containedElements, ...containedBoundTexts].map(
-        (el) => [el.id, el],
-      ),
+    const idsOfElementsToDuplicate = getElementsWithContents(
+      selectedElements,
+      containedElements,
+      elementsMap,
     );
 
     const duplication = duplicateElements({

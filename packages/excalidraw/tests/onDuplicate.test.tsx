@@ -475,7 +475,8 @@ describe("props.onDuplicate data", () => {
 
   it("duplicate action", () => {
     const [container, text] = API.createTextContainer();
-    const rectangle = API.createElement({ type: "rectangle" });
+    // excalidraw-web: apart, so it is not inside the duplicated container
+    const rectangle = API.createElement({ type: "rectangle", x: 500 });
     API.setElements([container, text, rectangle]);
     API.setSelectedElements([container]);
 
