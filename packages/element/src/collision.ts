@@ -92,6 +92,8 @@ export const shouldTestInside = (element: ExcalidrawElement) => {
 
   const isDraggableFromInside =
     (hasBackground(element.type) && !isTransparent(element.backgroundColor)) ||
+    // excalidraw-web: a container that keeps its size is hit inside, filled or not
+    element.keepsSize ||
     hasBoundTextElement(element) ||
     isIframeLikeElement(element) ||
     isTextElement(element);

@@ -25,11 +25,12 @@ import { Excalidraw } from "../index";
 import { exportToSvg } from "../scene/export";
 
 import { API } from "./helpers/api";
-import { Keyboard } from "./helpers/ui";
+import { Keyboard, Pointer } from "./helpers/ui";
 import { getTextEditor, updateTextEditor } from "./queries/dom";
 import { render, unmountComponent } from "./test-utils";
 
 const { h } = window;
+const mouse = new Pointer("mouse");
 
 unmountComponent();
 
@@ -199,6 +200,40 @@ describe("a container that keeps its size", () => {
     expect(clipPath.querySelector("polygon")).not.toBeNull();
     const group = svg.querySelector(`g[clip-path="url(#${clipPath.id})"]`)!;
     expect(group.querySelector("text")).not.toBeNull();
+  });
+});
+
+describe("clicking a container that keeps its size", () => {
+  beforeEach(async () => {
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+    API.setElements([]);
+  });
+
+  it("selects it from anywhere inside, unfilled as it is", () => {
+    const cell = {
+      ...API.createElement({
+        type: "rectangle",
+        x: 0,
+        y: 0,
+        width: 160,
+        height: 60,
+      }),
+      keepsSize: true,
+    };
+    const plain = API.createElement({
+      type: "rectangle",
+      x: 300,
+      y: 0,
+      width: 160,
+      height: 60,
+    });
+    API.setElements([cell, plain]);
+
+    mouse.clickAt(380, 30);
+    expect(h.state.selectedElementIds).toEqual({});
+
+    mouse.clickAt(80, 30);
+    expect(h.state.selectedElementIds).toEqual({ [cell.id]: true });
   });
 });
 
