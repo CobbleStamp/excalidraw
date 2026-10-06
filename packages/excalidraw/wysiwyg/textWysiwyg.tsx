@@ -30,6 +30,7 @@ import {
   redrawTextBoundingBox,
   getBoundTextMaxHeight,
   getBoundTextMaxWidth,
+  getBoundTextWrapWidth,
   computeContainerDimensionForBoundText,
   computeBoundTextPosition,
   getBoundTextElement,
@@ -345,7 +346,11 @@ export const textWysiwyg = ({
           }
 
           // autogrow container height if text exceeds
-          if (!isArrowElement(container) && height > maxHeight) {
+          if (
+            !isArrowElement(container) &&
+            !container.keepsSize &&
+            height > maxHeight
+          ) {
             const targetContainerHeight = computeContainerDimensionForBoundText(
               height,
               container,
@@ -360,6 +365,7 @@ export const textWysiwyg = ({
             // autoshrink container height until original container height
             // is reached when text is removed
             !isArrowElement(container) &&
+            !container.keepsSize &&
             container.height > originalContainerData.height &&
             height < maxHeight
           ) {
@@ -387,6 +393,10 @@ export const textWysiwyg = ({
       if (!container) {
         maxWidth = (appState.width - 8 - viewportX) / appState.zoom.value;
         width = Math.min(width, maxWidth);
+      } else if (container.keepsSize) {
+        // the editor stays inside the container; overflowing text scrolls
+        width = Math.min(width + 0.5, maxWidth);
+        height = Math.min(height, maxHeight);
       } else {
         width += 0.5;
       }
@@ -461,7 +471,12 @@ export const textWysiwyg = ({
   let whiteSpace = "pre";
   let wordBreak = "normal";
 
-  if (isBoundToContainer(element) || !element.autoResize) {
+  if (
+    (isBoundToContainer(element) &&
+      getContainerElement(element, app.scene.getNonDeletedElementsMap())
+        ?.wrapsText !== false) ||
+    (!isBoundToContainer(element) && !element.autoResize)
+  ) {
     whiteSpace = "pre-wrap";
     wordBreak = "break-word";
   }
@@ -639,7 +654,11 @@ export const textWysiwyg = ({
         const { selectionStart, selectionEnd, value } = editable;
         const nextText =
           value.slice(0, selectionStart) + text + value.slice(selectionEnd);
-        const wrappedText = wrapText(nextText, font, maxWidth);
+        const wrappedText = wrapText(
+          nextText,
+          font,
+          getBoundTextWrapWidth(container, boundTextElement),
+        );
         const width = Math.min(getTextWidth(wrappedText, font), maxWidth);
         editable.style.width = `${width}px`;
       }

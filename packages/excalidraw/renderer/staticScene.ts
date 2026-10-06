@@ -26,6 +26,7 @@ import {
 } from "@excalidraw/element";
 
 import { getElementAbsoluteCoords } from "@excalidraw/element";
+import { getOutlinePoints } from "@excalidraw/element";
 
 import type { ElementRenderState } from "@excalidraw/element";
 
@@ -186,6 +187,26 @@ export const frameClip = (
     -(frame.x + appState.scrollX),
     -(frame.y + appState.scrollY),
   );
+};
+
+/** Clips the context to an element's outline, sharp-cornered. */
+const outlineClip = (
+  element: NonDeletedExcalidrawElement,
+  context: CanvasRenderingContext2D,
+  appState: StaticCanvasAppState,
+  elementsMap: ElementsMap,
+) => {
+  const outline = getOutlinePoints(element, elementsMap);
+  context.beginPath();
+  outline.forEach(([x, y], index) => {
+    if (index === 0) {
+      context.moveTo(x + appState.scrollX, y + appState.scrollY);
+    } else {
+      context.lineTo(x + appState.scrollX, y + appState.scrollY);
+    }
+  });
+  context.closePath();
+  context.clip();
 };
 
 type LinkIconCanvas = HTMLCanvasElement & { zoom: number };
@@ -424,6 +445,16 @@ const _renderStaticScene = ({
         );
 
         if (boundTextElement) {
+          context.save();
+          if (element.keepsSize) {
+            // text past the outline of a container that keeps its size is hidden
+            outlineClip(
+              getRenderElementWithPositionOverride(element, renderState.offset),
+              context,
+              appState,
+              elementsMap,
+            );
+          }
           renderElement(
             boundTextElement,
             elementsMap,
@@ -433,6 +464,7 @@ const _renderStaticScene = ({
             renderConfig,
             appState,
           );
+          context.restore();
         }
 
         context.restore();

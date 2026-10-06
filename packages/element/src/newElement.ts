@@ -29,7 +29,7 @@ import {
   normalizeStickyNoteBackgroundColor,
   normalizeStickyNoteStrokeColor,
 } from "./stickyNote";
-import { getBoundTextMaxWidth } from "./textElement";
+import { getBoundTextWrapWidth } from "./textElement";
 import { normalizeText, measureText } from "./textMeasurements";
 import { wrapText } from "./textWrapping";
 
@@ -552,7 +552,7 @@ export const refreshTextDimensions = (
       text,
       getFontString(textElement),
       container
-        ? getBoundTextMaxWidth(container, textElement)
+        ? getBoundTextWrapWidth(container, textElement)
         : textElement.width,
     );
   }

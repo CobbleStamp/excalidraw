@@ -62,7 +62,7 @@ const rotateAboutCenter = (
 ): GlobalPoint => pointRotateRads(point, center, angle);
 
 /** The points that trace an element's outline, in scene coordinates. */
-const getOutlinePoints = (
+export const getOutlinePoints = (
   element: ExcalidrawElement,
   elementsMap: ElementsMap,
 ): GlobalPoint[] => {

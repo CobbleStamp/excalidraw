@@ -25,6 +25,7 @@ import {
 } from "@excalidraw/element";
 import { LinearElementEditor } from "@excalidraw/element";
 import { getBoundTextElement, getContainerElement } from "@excalidraw/element";
+import { getOutlinePoints } from "@excalidraw/element";
 import { getLineHeightInPx } from "@excalidraw/element";
 import {
   isArrowElement,
@@ -92,6 +93,43 @@ const maybeWrapNodesInFrameClipPath = (
   }
 
   return null;
+};
+
+/**
+ * Moves the nodes appended to `root` since `firstNewNode` into a group
+ * clipped to `element`'s outline (sharp-cornered), so what they draw past
+ * it is hidden.
+ */
+const clipNewNodesToOutline = (
+  element: Readonly<NonDeletedExcalidrawElement>,
+  root: SVGElement,
+  firstNewNode: number,
+  elementsMap: RenderableElementsMap,
+  renderConfig: SVGRenderConfig,
+) => {
+  const nodes = Array.from(root.childNodes).slice(firstNewNode);
+  if (!nodes.length) {
+    return;
+  }
+  const doc = root.ownerDocument;
+  const clipPath = doc.createElementNS(SVG_NS, "clipPath");
+  const clipId = `outline-${element.id}-${firstNewNode}`;
+  clipPath.setAttribute("id", clipId);
+  const polygon = doc.createElementNS(SVG_NS, "polygon");
+  polygon.setAttribute(
+    "points",
+    getOutlinePoints(element, elementsMap)
+      .map(
+        ([x, y]) => `${x + renderConfig.offsetX},${y + renderConfig.offsetY}`,
+      )
+      .join(" "),
+  );
+  clipPath.appendChild(polygon);
+  const group = doc.createElementNS(SVG_NS, "g");
+  group.setAttribute("clip-path", `url(#${clipId})`);
+  nodes.forEach((node) => group.appendChild(node));
+  root.appendChild(clipPath);
+  root.appendChild(group);
 };
 
 const renderElementToSvg = (
@@ -888,6 +926,7 @@ export const renderSceneToSvg = (
 
           const boundTextElement = getBoundTextElement(element, elementsMap);
           if (boundTextElement?.isDeleted === false) {
+            const firstTextNode = svgRoot.childNodes.length;
             renderElementToSvg(
               boundTextElement as Readonly<NonDeletedExcalidrawElement>,
               elementsMap,
@@ -898,6 +937,16 @@ export const renderSceneToSvg = (
               boundTextElement.y + renderConfig.offsetY,
               renderConfig,
             );
+            if (element.keepsSize) {
+              // text past the outline of a container that keeps its size is hidden
+              clipNewNodesToOutline(
+                element,
+                svgRoot,
+                firstTextNode,
+                elementsMap,
+                renderConfig,
+              );
+            }
           } else if (boundTextElement) {
             // SAFETY: This should never happen, but log it just in case
             console.error(
