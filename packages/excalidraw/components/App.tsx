@@ -11352,9 +11352,17 @@ class App extends React.Component<AppProps, AppState> {
         const selectedElements = this.scene.getSelectedElements(this.state);
         if (
           selectedElements.length > 0 &&
-          (selectedElements.every((element) => element.locked) ||
-            this.props.refusesDrag?.(selectedElements))
+          selectedElements.every((element) => element.locked)
         ) {
+          return;
+        }
+        if (
+          selectedElements.length > 0 &&
+          this.props.refusesDrag?.(selectedElements)
+        ) {
+          // excalidraw-web: a drag the host refuses is still a drag, so
+          // releasing it does not select as a click would
+          pointerDownState.drag.hasOccurred = true;
           return;
         }
 

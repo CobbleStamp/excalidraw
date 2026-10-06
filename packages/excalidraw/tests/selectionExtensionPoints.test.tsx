@@ -120,6 +120,24 @@ describe("refusesDrag", () => {
   });
 });
 
+describe("refusesDrag, released", () => {
+  it("is no click: the selection the host set during the drag stays", async () => {
+    await renderWith({ refusesDrag: () => true });
+    const pressed = rectangleAt(0);
+    const other = rectangleAt(200);
+    API.setElements([pressed, other]);
+    mouse.select(pressed);
+
+    mouse.downAt(50, 25);
+    mouse.moveTo(90, 25);
+    API.setSelectedElements([other]);
+    mouse.upAt(90, 25);
+
+    expect(h.state.selectedElementIds).toEqual({ [other.id]: true });
+    expect(h.elements[0]).toMatchObject({ x: 0, y: 0 });
+  });
+});
+
 describe("entersGroupOnClick", () => {
   const groupOfTwo = () => {
     const left = { ...rectangleAt(0), groupIds: ["matrix"] };
