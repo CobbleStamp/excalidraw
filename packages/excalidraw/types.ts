@@ -1148,6 +1148,33 @@ export interface ExcalidrawProps {
    */
   hidesLinkInfo?: (element: NonDeletedExcalidrawElement) => boolean;
   /**
+   * excalidraw-web: whether a selected element's link editor is hidden, as
+   * when the host shows an editor of its own while `showHyperlinkPopup` is
+   * "editor"; the host then closes it by setting that to `false`.
+   */
+  hidesLinkEditor?: (element: NonDeletedExcalidrawElement) => boolean;
+  /**
+   * excalidraw-web: whether a click anywhere on a linked element follows its
+   * link, as in view mode, rather than on its icon alone. Outside view mode,
+   * pressing and dragging still moves it, and a still press held for
+   * `LINK_LONG_PRESS_TIMEOUT` leaves it selected.
+   */
+  followsLinkOnClick?: (element: NonDeletedExcalidrawElement) => boolean;
+  /**
+   * excalidraw-web: told of the linked element under the pointer, and of
+   * none once the pointer leaves it; the editor then shows no link tooltip
+   * of its own.
+   */
+  onLinkHover?: (element: NonDeletedExcalidrawElement | null) => void;
+  /**
+   * excalidraw-web: the icon drawn at a linked element's corner, a loaded
+   * image; the editor's own when it returns `null`. The same image for the
+   * same kind of link, as the editor caches its drawing per image.
+   */
+  linkIcon?: (element: NonDeletedExcalidrawElement) => HTMLImageElement | null;
+  /** excalidraw-web: actions the host adds to an element's context menu, after its link actions, outside view mode */
+  elementContextMenuItems?: readonly Action[];
+  /**
    * excalidraw-web: the tab the sidebar button opens the default sidebar on,
    * as the one last used; the library when unset.
    */

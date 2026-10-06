@@ -34,6 +34,8 @@ export type StaticCanvasRenderConfig = {
   /** whether to render link icons on elements with links (never rendered
    when exporting). @default true */
   renderLinks?: boolean;
+  /** excalidraw-web: the host's icon for an element's link, `null` for the editor's own */
+  linkIcon?: (element: NonDeletedExcalidrawElement) => HTMLImageElement | null;
   /** when exporting the behavior is slightly different (e.g. we can't use
    CSS filters), and we disable render optimizations for best output */
   isExporting: boolean;

@@ -190,13 +190,11 @@ export const frameClip = (
 
 type LinkIconCanvas = HTMLCanvasElement & { zoom: number };
 
-const linkIconCanvasCache: {
-  regularLink: LinkIconCanvas | null;
-  elementLink: LinkIconCanvas | null;
-} = {
-  regularLink: null,
-  elementLink: null,
-};
+/** each link icon drawn at the current zoom, by the editor's kind of link or the host's image */
+const linkIconCanvasCache: Map<
+  "regularLink" | "elementLink" | HTMLImageElement,
+  LinkIconCanvas
+> = new Map();
 
 const renderLinkIcon = (
   element: NonDeletedExcalidrawElement,
@@ -204,6 +202,7 @@ const renderLinkIcon = (
   appState: StaticCanvasAppState,
   elementsMap: ElementsMap,
   renderState: ElementRenderState,
+  renderConfig: StaticCanvasRenderConfig,
 ) => {
   if (element.link && !appState.selectedElementIds[element.id]) {
     const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
@@ -223,11 +222,11 @@ const renderLinkIcon = (
     context.translate(appState.scrollX + centerX, appState.scrollY + centerY);
     context.rotate(element.angle);
 
-    const canvasKey = isElementLink(element.link)
-      ? "elementLink"
-      : "regularLink";
+    const canvasKey =
+      renderConfig.linkIcon?.(element) ??
+      (isElementLink(element.link) ? "elementLink" : "regularLink");
 
-    let linkCanvas = linkIconCanvasCache[canvasKey];
+    let linkCanvas = linkIconCanvasCache.get(canvasKey);
 
     if (!linkCanvas || linkCanvas.zoom !== appState.zoom.value) {
       linkCanvas = Object.assign(document.createElement("canvas"), {
@@ -236,7 +235,7 @@ const renderLinkIcon = (
       linkCanvas.width = width * window.devicePixelRatio * appState.zoom.value;
       linkCanvas.height =
         height * window.devicePixelRatio * appState.zoom.value;
-      linkIconCanvasCache[canvasKey] = linkCanvas;
+      linkIconCanvasCache.set(canvasKey, linkCanvas);
 
       const linkCanvasCacheContext = linkCanvas.getContext("2d")!;
       linkCanvasCacheContext.scale(
@@ -254,7 +253,7 @@ const renderLinkIcon = (
 
       if (canvasKey === "elementLink") {
         linkCanvasCacheContext.drawImage(ELEMENT_LINK_IMG, 0, 0, width, height);
-      } else {
+      } else if (canvasKey === "regularLink") {
         linkCanvasCacheContext.drawImage(
           EXTERNAL_LINK_IMG,
           0,
@@ -262,6 +261,8 @@ const renderLinkIcon = (
           width,
           height,
         );
+      } else {
+        linkCanvasCacheContext.drawImage(canvasKey, 0, 0, width, height);
       }
 
       linkCanvasCacheContext.restore();
@@ -437,7 +438,14 @@ const _renderStaticScene = ({
         context.restore();
 
         if (!isExporting && renderConfig.renderLinks !== false) {
-          renderLinkIcon(element, context, appState, elementsMap, renderState);
+          renderLinkIcon(
+            element,
+            context,
+            appState,
+            elementsMap,
+            renderState,
+            renderConfig,
+          );
         }
       } catch (error: any) {
         console.error(
@@ -496,7 +504,14 @@ const _renderStaticScene = ({
           );
         }
         if (!isExporting && renderConfig.renderLinks !== false) {
-          renderLinkIcon(element, context, appState, elementsMap, renderState);
+          renderLinkIcon(
+            element,
+            context,
+            appState,
+            elementsMap,
+            renderState,
+            renderConfig,
+          );
         }
         context.restore();
       } catch (error: any) {
