@@ -23,6 +23,12 @@ export const APP_NAME = "Excalidraw";
 // (happens a lot with fast clicks with the text tool)
 export const TEXT_AUTOWRAP_THRESHOLD = 36; // px
 export const DRAGGING_THRESHOLD = 10; // px
+/**
+ * excalidraw-web: how far, in screen px, a press on a selected element must
+ * move before it drags it; under that it is a click, so a hand's wobble
+ * while clicking moves nothing.
+ */
+export const ELEMENT_DRAGGING_THRESHOLD = 4; // px
 export const MINIMUM_ARROW_SIZE = 20; // px
 export const LINE_CONFIRM_THRESHOLD = 8; // px
 export const ELEMENT_SHIFT_TRANSLATE_AMOUNT = 5;

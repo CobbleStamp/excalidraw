@@ -32,6 +32,7 @@ import {
   DEFAULT_TRANSFORM_HANDLE_SPACING,
   DEFAULT_VERTICAL_ALIGN,
   DRAGGING_THRESHOLD,
+  ELEMENT_DRAGGING_THRESHOLD,
   ELEMENT_SHIFT_TRANSLATE_AMOUNT,
   ELEMENT_TRANSLATE_AMOUNT,
   EVENT,
@@ -11349,6 +11350,19 @@ class App extends React.Component<AppProps, AppState> {
         !isSelectingPointsInLineEditor &&
         !pointerDownState.drag.blockDragging
       ) {
+        // excalidraw-web: a press is a click until it has moved far enough,
+        // then the drag follows the pointer from where it was pressed
+        if (
+          !pointerDownState.drag.hasOccurred &&
+          Math.hypot(
+            pointerCoords.x - pointerDownState.origin.x,
+            pointerCoords.y - pointerDownState.origin.y,
+          ) *
+            this.state.zoom.value <
+            ELEMENT_DRAGGING_THRESHOLD
+        ) {
+          return;
+        }
         const selectedElements = this.scene.getSelectedElements(this.state);
         if (
           selectedElements.length > 0 &&

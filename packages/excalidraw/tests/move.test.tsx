@@ -1,6 +1,11 @@
 import React from "react";
 import { vi } from "vitest";
-import { KEYS, reseed, DEFAULT_ZOOM } from "@excalidraw/common";
+import {
+  KEYS,
+  reseed,
+  DEFAULT_ZOOM,
+  ELEMENT_DRAGGING_THRESHOLD,
+} from "@excalidraw/common";
 import { bindBindingElement } from "@excalidraw/element";
 import "@excalidraw/utils/test-utils";
 
@@ -14,6 +19,7 @@ import { Excalidraw } from "../index";
 import * as InteractiveCanvas from "../renderer/interactiveScene";
 import * as StaticScene from "../renderer/staticScene";
 
+import { API } from "./helpers/api";
 import { UI, Pointer, Keyboard } from "./helpers/ui";
 import { render, fireEvent, act, unmountComponent } from "./test-utils";
 
@@ -186,5 +192,39 @@ describe("duplicate element on move when ALT is clicked", () => {
     expect([h.elements[1].x, h.elements[1].y]).toEqual([-10, 60]);
 
     h.elements.forEach((element) => expect(element).toMatchSnapshot());
+  });
+});
+
+// excalidraw-web: a click's wobble moves nothing; a drag moves from the press
+describe("a press on a selected element", () => {
+  const mouse = new Pointer("mouse");
+
+  const pressAndMoveBy = async (dx: number) => {
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+    const rectangle = API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      backgroundColor: "red",
+      fillStyle: "solid",
+    });
+    API.setElements([rectangle]);
+    mouse.reset();
+    mouse.downAt(50, 50);
+    mouse.moveTo(50 + dx, 50);
+    mouse.up();
+    return API.getElement(rectangle);
+  };
+
+  it("is a click while it moves less than the threshold", async () => {
+    const pressed = await pressAndMoveBy(ELEMENT_DRAGGING_THRESHOLD - 1);
+    expect([pressed.x, pressed.y]).toEqual([0, 0]);
+  });
+
+  it("drags the element by the whole distance once past the threshold", async () => {
+    const pressed = await pressAndMoveBy(ELEMENT_DRAGGING_THRESHOLD + 6);
+    expect([pressed.x, pressed.y]).toEqual([ELEMENT_DRAGGING_THRESHOLD + 6, 0]);
   });
 });
