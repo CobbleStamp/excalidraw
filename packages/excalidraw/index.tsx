@@ -88,6 +88,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     transformHandlesOf,
     refusesDrag,
     entersGroupOnClick,
+    shapePanelSections,
     className,
     ownerDocument = document,
     onChange,
@@ -251,6 +252,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           transformHandlesOf={transformHandlesOf}
           refusesDrag={refusesDrag}
           entersGroupOnClick={entersGroupOnClick}
+          shapePanelSections={shapePanelSections}
           className={className}
           ownerDocument={ownerDocument}
           onChange={onChange}

@@ -18,7 +18,7 @@ import { Excalidraw } from "../index";
 import { API } from "./helpers/api";
 import { Keyboard, Pointer, UI } from "./helpers/ui";
 import { getTextEditor } from "./queries/dom";
-import { act, render, unmountComponent } from "./test-utils";
+import { act, render, screen, unmountComponent } from "./test-utils";
 
 import type { ExcalidrawProps } from "../types";
 
@@ -231,5 +231,28 @@ describe("startTextEditing", () => {
     Keyboard.exitTextEditor(await getTextEditor());
 
     expect(h.elements[0]).toMatchObject({ width: 20, height: 20 });
+  });
+});
+
+describe("shapePanelSections", () => {
+  it("shows the host's sections in the selected shapes' panel, given the selection", async () => {
+    const seen: number[] = [];
+    await renderWith({
+      shapePanelSections: (selected) => {
+        seen.push(selected.length);
+        return <div data-testid="host-section">{selected.length} chosen</div>;
+      },
+    });
+    const left = rectangleAt(0);
+    const right = rectangleAt(200);
+    API.setElements([left, right]);
+
+    expect(screen.queryByTestId("host-section")).toBeNull();
+    API.setSelectedElements([left, right]);
+
+    expect((await screen.findByTestId("host-section")).textContent).toBe(
+      "2 chosen",
+    );
+    expect(seen).toContain(2);
   });
 });

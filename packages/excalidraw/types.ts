@@ -1205,6 +1205,13 @@ export interface ExcalidrawProps {
    * group select that member alone, as a double-click does.
    */
   entersGroupOnClick?: (element: NonDeletedExcalidrawElement) => boolean;
+  /**
+   * excalidraw-web: the host's own sections of the selected shapes' panel,
+   * shown after its style controls; nothing when it returns null.
+   */
+  shapePanelSections?: (
+    selectedElements: readonly NonDeletedExcalidrawElement[],
+  ) => React.ReactNode;
 }
 
 /** The files a PNG export draws, given those the scene holds and the elements exported. */
