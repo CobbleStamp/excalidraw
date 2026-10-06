@@ -1083,5 +1083,13 @@ export const textWysiwyg = ({
     ?.querySelector(".excalidraw-textEditorContainer")!
     .appendChild(editable);
 
+  if (startAtEnd) {
+    // excalidraw-web: opened by the host, as by typing into a selected
+    // container, the text box takes keys at once, so none typed quickly after
+    // is lost while the usual deferred focus waits
+    editable.focus();
+    editable.setSelectionRange(editable.value.length, editable.value.length);
+  }
+
   return handleSubmit;
 };
