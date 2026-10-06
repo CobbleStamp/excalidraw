@@ -708,6 +708,29 @@ describe("moving a container moves what it contains", () => {
     ).toEqual([outside.id]);
   });
 
+  it("deleting a container deletes what lies inside it, not what lies partly outside", () => {
+    const container = makeContainer();
+    const text = makeTextInside();
+    const straddling = API.createElement({
+      id: "straddling",
+      type: "rectangle",
+      x: 280,
+      y: 40,
+      width: 50,
+      height: 50,
+    });
+    API.setElements([container, text, straddling]);
+    API.setSelectedElements([container]);
+
+    Keyboard.keyPress(KEYS.DELETE);
+
+    expect(
+      h.elements
+        .filter((element) => !element.isDeleted)
+        .map((element) => element.id),
+    ).toEqual([straddling.id]);
+  });
+
   it("keeps dragging when alt-drag duplicates the selection", () => {
     const container = makeContainer();
     const text = makeTextInside();

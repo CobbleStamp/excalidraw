@@ -28,8 +28,8 @@ import type { AppClassProperties, AppState } from "../types";
 
 /**
  * excalidraw-web: the selection with what lies inside its containers, and
- * their bound text, in stacking order: what copy and cut take, as duplicating
- * does.
+ * their bound text, in stacking order: what copy takes, as duplicating does
+ * (and deleting, so cut takes it too).
  */
 const getSelectionWithContents = (
   appState: AppState,
@@ -152,19 +152,7 @@ export const actionCut = register<ClipboardEvent | null>({
   trackEvent: { category: "element" },
   perform: (elements, appState, event, app) => {
     actionCopy.perform(elements, appState, event, app);
-    // excalidraw-web: what lies inside a cut container is cut with it, as
-    // it is copied with it
-    const selectedElementIds = Object.fromEntries(
-      getSelectionWithContents(appState, app)
-        .filter((element) => !isTextElement(element) || !element.containerId)
-        .map((element) => [element.id, true as const]),
-    );
-    return actionDeleteSelected.perform(
-      elements,
-      { ...appState, selectedElementIds },
-      null,
-      app,
-    );
+    return actionDeleteSelected.perform(elements, appState, null, app);
   },
   keyTest: (event) => event[KEYS.CTRL_OR_CMD] && event.key === KEYS.X,
 });
