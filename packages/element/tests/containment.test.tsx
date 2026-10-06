@@ -585,6 +585,34 @@ describe("moving a container moves what it contains", () => {
     expect(textXs).toEqual([40, 140]);
   });
 
+  it("duplicating a container with Ctrl+D duplicates it with its contents, selecting the copies", () => {
+    const container = makeContainer();
+    const text = makeTextInside();
+    API.setElements([container, text]);
+    API.setSelectedElements([container]);
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      Keyboard.keyPress(KEYS.D);
+    });
+
+    const live = h.elements.filter((element) => !element.isDeleted);
+    const copies = live.filter(
+      (element) => element.id !== container.id && element.id !== text.id,
+    );
+    // one full copy, offset by half a grid step, as Ctrl+D places copies
+    expect(copies.map((element) => element.type).sort()).toEqual([
+      "rectangle",
+      "text",
+    ]);
+    const copiedText = copies.find((element) => element.type === "text")!;
+    expect(copiedText.x - text.x).toBe(
+      copies.find((element) => element.type === "rectangle")!.x - container.x,
+    );
+    expect(Object.keys(h.state.selectedElementIds).sort()).toEqual(
+      copies.map((element) => element.id).sort(),
+    );
+  });
+
   it("keeps dragging when alt-drag duplicates the selection", () => {
     const container = makeContainer();
     const text = makeTextInside();

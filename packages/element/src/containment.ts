@@ -14,6 +14,7 @@ import { getElementAbsoluteCoords } from "./bounds";
 import { addElementsToFrame, removeElementsFromFrame } from "./frame";
 import { getElementsInGroup } from "./groups";
 import { getPolygonPoints, isPointInsidePolygonPoints } from "./polygon";
+import { getBoundTextElement } from "./textElement";
 import {
   isFrameLikeElement,
   isFreeDrawElement,
@@ -256,6 +257,27 @@ export const getContainedElements = (
   }
 
   return Array.from(contained);
+};
+
+/**
+ * What duplicating `selectedElements` copies: those, and the elements lying
+ * inside the containers among them (`containedElements`, from
+ * `getContainedElements`) with their bound text, so a duplicated container
+ * is a full copy however it is duplicated.
+ */
+export const getElementsToDuplicate = (
+  selectedElements: readonly NonDeletedExcalidrawElement[],
+  containedElements: readonly NonDeletedExcalidrawElement[],
+  elementsMap: ElementsMap,
+): Map<ExcalidrawElement["id"], NonDeletedExcalidrawElement> => {
+  const containedBoundTexts = containedElements
+    .map((element) => getBoundTextElement(element, elementsMap))
+    .filter((text): text is NonNullable<typeof text> => !!text);
+  return new Map(
+    [...selectedElements, ...containedElements, ...containedBoundTexts].map(
+      (element) => [element.id, element],
+    ),
+  );
 };
 
 const keptSizeHoldersCache = new WeakMap<

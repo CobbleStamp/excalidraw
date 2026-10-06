@@ -16,7 +16,11 @@ import {
 
 import { syncMovedIndices } from "@excalidraw/element";
 
-import { duplicateElements } from "@excalidraw/element";
+import {
+  duplicateElements,
+  getContainedElements,
+  getElementsToDuplicate,
+} from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
@@ -60,15 +64,28 @@ export const actionDuplicateSelection = register({
       }
     }
 
+    // excalidraw-web: a duplicated container is duplicated with its
+    // contents (and their bound text), as alt-drag duplicates it
+    const selectedElements = getSelectedElements(elements, appState, {
+      includeBoundTextElement: true,
+      includeElementsInFrames: true,
+    });
+    const elementsMap = app.scene.getNonDeletedElementsMap();
+    const containedElements = getContainedElements(
+      selectedElements,
+      app.scene.getNonDeletedElements(),
+      elementsMap,
+    );
+    const idsOfElementsToDuplicate = getElementsToDuplicate(
+      selectedElements,
+      containedElements,
+      elementsMap,
+    );
+
     const duplication = duplicateElements({
       type: "in-place",
       elements,
-      idsOfElementsToDuplicate: arrayToMap(
-        getSelectedElements(elements, appState, {
-          includeBoundTextElement: true,
-          includeElementsInFrames: true,
-        }),
-      ),
+      idsOfElementsToDuplicate,
       appState,
       randomizeSeed: true,
       overrides: ({ origElement, origIdToDuplicateId }) => {
