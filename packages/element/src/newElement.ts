@@ -169,6 +169,10 @@ const _newElementBase = <T extends ExcalidrawElement>(
     link,
     locked,
     customData: rest.customData,
+    // excalidraw-web: kept when an element is made from another, as a
+    // converted shape is
+    ...(rest.keepsSize !== undefined && { keepsSize: rest.keepsSize }),
+    ...(rest.wrapsText !== undefined && { wrapsText: rest.wrapsText }),
   };
   return element;
 };

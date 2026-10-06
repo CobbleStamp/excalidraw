@@ -9,6 +9,7 @@ import { arrayToMap, KEYS, VERTICAL_ALIGN } from "@excalidraw/common";
 import { exportToCanvas } from "@excalidraw/utils";
 
 import {
+  newElement,
   computeBoundTextPosition,
   getContainerCoords,
   getKeptSizeHolders,
@@ -351,5 +352,28 @@ describe("a container that does not wrap its text", () => {
     await typeInto(cell, WIDE_TEXT);
 
     expect(boundTextOf(cell).text).toContain("\n");
+  });
+});
+
+describe("an element made from one that keeps its size", () => {
+  it("keeps its size and its wrapping, as a converted shape does", () => {
+    const cell = {
+      ...API.createElement({ type: "rectangle", width: 160, height: 60 }),
+      keepsSize: true,
+      wrapsText: false,
+    };
+
+    expect(newElement({ ...cell, type: "ellipse" })).toMatchObject({
+      type: "ellipse",
+      id: cell.id,
+      keepsSize: true,
+      wrapsText: false,
+    });
+    expect(
+      newElement({
+        ...API.createElement({ type: "rectangle" }),
+        type: "diamond",
+      }),
+    ).not.toHaveProperty("keepsSize");
   });
 });
