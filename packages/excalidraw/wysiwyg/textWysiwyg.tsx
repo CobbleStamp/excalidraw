@@ -30,6 +30,7 @@ import {
   redrawTextBoundingBox,
   getBoundTextMaxHeight,
   getBoundTextMaxWidth,
+  getBoundTextWrapWidth,
   computeContainerDimensionForBoundText,
   computeBoundTextPosition,
   getBoundTextElement,
@@ -213,6 +214,7 @@ export const textWysiwyg = ({
   app,
   autoSelect = true,
   initialCaretSceneCoords = null,
+  startAtEnd = null,
 }: {
   /**
    * textWysiwyg only deals with `originalText`
@@ -229,6 +231,8 @@ export const textWysiwyg = ({
   app: App;
   autoSelect?: boolean;
   initialCaretSceneCoords?: { x: number; y: number } | null;
+  /** excalidraw-web: start with the caret at the end, the text replaced when given */
+  startAtEnd?: { text?: string } | null;
 }): SubmitHandler => {
   const ownerDocument = excalidrawContainer?.ownerDocument ?? document;
   const ownerWindow = ownerDocument.defaultView ?? window;
@@ -345,7 +349,11 @@ export const textWysiwyg = ({
           }
 
           // autogrow container height if text exceeds
-          if (!isArrowElement(container) && height > maxHeight) {
+          if (
+            !isArrowElement(container) &&
+            !container.keepsSize &&
+            height > maxHeight
+          ) {
             const targetContainerHeight = computeContainerDimensionForBoundText(
               height,
               container,
@@ -360,6 +368,7 @@ export const textWysiwyg = ({
             // autoshrink container height until original container height
             // is reached when text is removed
             !isArrowElement(container) &&
+            !container.keepsSize &&
             container.height > originalContainerData.height &&
             height < maxHeight
           ) {
@@ -387,6 +396,10 @@ export const textWysiwyg = ({
       if (!container) {
         maxWidth = (appState.width - 8 - viewportX) / appState.zoom.value;
         width = Math.min(width, maxWidth);
+      } else if (container.keepsSize) {
+        // the editor stays inside the container; overflowing text scrolls
+        width = Math.min(width + 0.5, maxWidth);
+        height = Math.min(height, maxHeight);
       } else {
         width += 0.5;
       }
@@ -461,7 +474,12 @@ export const textWysiwyg = ({
   let whiteSpace = "pre";
   let wordBreak = "normal";
 
-  if (isBoundToContainer(element) || !element.autoResize) {
+  if (
+    (isBoundToContainer(element) &&
+      getContainerElement(element, app.scene.getNonDeletedElementsMap())
+        ?.wrapsText !== false) ||
+    (!isBoundToContainer(element) && !element.autoResize)
+  ) {
     whiteSpace = "pre-wrap";
     wordBreak = "break-word";
   }
@@ -485,7 +503,7 @@ export const textWysiwyg = ({
     overflowWrap: "break-word",
     boxSizing: "content-box",
   });
-  editable.value = element.originalText;
+  editable.value = startAtEnd?.text ?? element.originalText;
   updateWysiwygStyle();
 
   const getCaretIndexFromInitialSceneCoords = () => {
@@ -639,7 +657,11 @@ export const textWysiwyg = ({
         const { selectionStart, selectionEnd, value } = editable;
         const nextText =
           value.slice(0, selectionStart) + text + value.slice(selectionEnd);
-        const wrappedText = wrapText(nextText, font, maxWidth);
+        const wrappedText = wrapText(
+          nextText,
+          font,
+          getBoundTextWrapWidth(container, boundTextElement),
+        );
         const width = Math.min(getTextWidth(wrappedText, font), maxWidth);
         editable.style.width = `${width}px`;
       }
@@ -1023,7 +1045,12 @@ export const textWysiwyg = ({
 
   let isDestroyed = false;
 
-  if (autoSelect && !pendingInitialSelection) {
+  if (startAtEnd) {
+    editable.setSelectionRange(editable.value.length, editable.value.length);
+    if (startAtEnd.text !== undefined) {
+      onChange?.(editable.value);
+    }
+  } else if (autoSelect && !pendingInitialSelection) {
     // select on init (focusing is done separately inside the bindBlurEvent()
     // because we need it to happen *after* the blur event from `pointerdown`)
     editable.select();
@@ -1055,6 +1082,14 @@ export const textWysiwyg = ({
   excalidrawContainer
     ?.querySelector(".excalidraw-textEditorContainer")!
     .appendChild(editable);
+
+  if (startAtEnd) {
+    // excalidraw-web: opened by the host, as by typing into a selected
+    // container, the text box takes keys at once, so none typed quickly after
+    // is lost while the usual deferred focus waits
+    editable.focus();
+    editable.setSelectionRange(editable.value.length, editable.value.length);
+  }
 
   return handleSubmit;
 };

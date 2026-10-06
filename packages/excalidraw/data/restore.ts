@@ -432,8 +432,12 @@ const repairBinding = <T extends ExcalidrawArrowElement>(
 };
 
 const restoreElementWithProperties = <
-  T extends Required<Omit<ExcalidrawElement, "customData">> & {
+  T extends Required<
+    Omit<ExcalidrawElement, "customData" | "keepsSize" | "wrapsText">
+  > & {
     customData?: ExcalidrawElement["customData"];
+    keepsSize?: ExcalidrawElement["keepsSize"];
+    wrapsText?: ExcalidrawElement["wrapsText"];
     /** @deprecated */
     boundElementIds?: readonly ExcalidrawElement["id"][];
     /** @deprecated */

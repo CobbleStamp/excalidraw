@@ -84,6 +84,12 @@ type _ExcalidrawElementBase = Readonly<{
   link: string | null;
   locked: boolean;
   customData?: Record<string, any>;
+  /** excalidraw-web: the element's text never resizes it; text past its
+      outline is hidden. Absent means the text grows it, as upstream. */
+  keepsSize?: boolean;
+  /** excalidraw-web: false keeps the element's text on one line per
+      paragraph instead of wrapping it. Absent means it wraps, as upstream. */
+  wrapsText?: boolean;
 }>;
 
 export type ExcalidrawSelectionElement = _ExcalidrawElementBase & {

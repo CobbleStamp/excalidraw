@@ -26,6 +26,7 @@ import {
 } from "@excalidraw/element";
 
 import { getElementAbsoluteCoords } from "@excalidraw/element";
+import { getKeptSizeHolders, getOutlinePoints } from "@excalidraw/element";
 
 import type { ElementRenderState } from "@excalidraw/element";
 
@@ -186,6 +187,26 @@ export const frameClip = (
     -(frame.x + appState.scrollX),
     -(frame.y + appState.scrollY),
   );
+};
+
+/** Clips the context to an element's outline, sharp-cornered. */
+const outlineClip = (
+  element: NonDeletedExcalidrawElement,
+  context: CanvasRenderingContext2D,
+  appState: StaticCanvasAppState,
+  elementsMap: ElementsMap,
+) => {
+  const outline = getOutlinePoints(element, elementsMap);
+  context.beginPath();
+  outline.forEach(([x, y], index) => {
+    if (index === 0) {
+      context.moveTo(x + appState.scrollX, y + appState.scrollY);
+    } else {
+      context.lineTo(x + appState.scrollX, y + appState.scrollY);
+    }
+  });
+  context.closePath();
+  context.clip();
 };
 
 type LinkIconCanvas = HTMLCanvasElement & { zoom: number };
@@ -393,6 +414,16 @@ const _renderStaticScene = ({
     }
   };
 
+  // what a container that keeps its size holds is hidden past its outline
+  const keptSizeHolders = getKeptSizeHolders(allElementsMap);
+  const clipElementToKeptSizeHolders = (
+    element: NonDeletedExcalidrawElement,
+  ) => {
+    for (const holder of keptSizeHolders.get(element.id) ?? []) {
+      outlineClip(holder, context, appState, allElementsMap);
+    }
+  };
+
   // Paint visible elements
   visibleElements
     .filter((el) => !isIframeLikeElement(el))
@@ -412,6 +443,7 @@ const _renderStaticScene = ({
 
         const renderState = getRenderState(element);
         clipElementToFrame(element, renderState);
+        clipElementToKeptSizeHolders(element);
         renderElement(
           element,
           elementsMap,
@@ -424,6 +456,16 @@ const _renderStaticScene = ({
         );
 
         if (boundTextElement) {
+          context.save();
+          if (element.keepsSize) {
+            // text past the outline of a container that keeps its size is hidden
+            outlineClip(
+              getRenderElementWithPositionOverride(element, renderState.offset),
+              context,
+              appState,
+              elementsMap,
+            );
+          }
           renderElement(
             boundTextElement,
             elementsMap,
@@ -433,6 +475,7 @@ const _renderStaticScene = ({
             renderConfig,
             appState,
           );
+          context.restore();
         }
 
         context.restore();
@@ -467,6 +510,7 @@ const _renderStaticScene = ({
         const renderState = getRenderState(element);
         context.save();
         clipElementToFrame(element, renderState);
+        clipElementToKeptSizeHolders(element);
         renderElement(
           element,
           elementsMap,

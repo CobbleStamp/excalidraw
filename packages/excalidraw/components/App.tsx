@@ -227,6 +227,7 @@ import {
   getResizeOffsetXY,
   getResizeArrowDirection,
   transformElements,
+  rotateContainedElements,
   getCursorForResizingElement,
   getElementWithTransformHandleType,
   getTransformHandleTypeFromCoords,
@@ -296,6 +297,8 @@ import type {
   NonDeletedSceneElementsMap,
   ExcalidrawBindableElement,
 } from "@excalidraw/element/types";
+
+import type { TransformHandleType } from "@excalidraw/element";
 
 import type {
   ArrowEndpoint,
@@ -888,6 +891,7 @@ class App extends React.Component<AppProps, AppState> {
       onUserFollow: (cb) => this.onUserFollowEmitter.on(cb),
       onStateChange: this.onStateChange,
       onEvent: this.onEvent,
+      startTextEditing: this.startEditingContainerText,
     };
     return api;
   }
@@ -5889,7 +5893,10 @@ class App extends React.Component<AppProps, AppState> {
         maybeHandleArrowPointlikeDrag({ app: this, event });
       }
 
-      if (isArrowKey(event.key)) {
+      if (
+        isArrowKey(event.key) &&
+        !this.props.refusesDrag?.(this.scene.getSelectedElements(this.state))
+      ) {
         let selectedElements = this.scene.getSelectedElements({
           selectedElementIds: this.state.selectedElementIds,
           includeBoundTextElement: true,
@@ -6487,6 +6494,7 @@ class App extends React.Component<AppProps, AppState> {
     {
       isExistingElement = false,
       initialCaretSceneCoords = null,
+      startAtEnd = null,
     }: {
       isExistingElement?: boolean;
       /**
@@ -6494,6 +6502,8 @@ class App extends React.Component<AppProps, AppState> {
        * text should be auto-selected
        */
       initialCaretSceneCoords?: { x: number; y: number } | null;
+      /** excalidraw-web: start with the caret at the end, the text replaced when given */
+      startAtEnd?: { text?: string } | null;
     },
   ) {
     const elementsMap = this.scene.getElementsMapIncludingDeleted();
@@ -6641,6 +6651,7 @@ class App extends React.Component<AppProps, AppState> {
       excalidrawContainer: this.excalidrawContainerRef.current,
       app: this,
       initialCaretSceneCoords,
+      startAtEnd,
       // when text is selected, it's hard (at least on iOS) to re-position the
       // caret (i.e. deselect). There's not much use for always selecting
       // the text on edit anyway (and users can select-all from contextmenu
@@ -7030,6 +7041,26 @@ class App extends React.Component<AppProps, AppState> {
     );
   }
 
+  /**
+   * excalidraw-web: opens a text container's text for editing with the caret
+   * at its end, its text replaced by `replaceWith` when given.
+   */
+  private startEditingContainerText = (
+    container: ExcalidrawTextContainer,
+    replaceWith?: string,
+  ) => {
+    const center = getContainerCenter(
+      container,
+      this.scene.getNonDeletedElementsMap(),
+    );
+    this.startTextEditing({
+      sceneX: center.x,
+      sceneY: center.y,
+      container,
+      startAtEnd: { text: replaceWith },
+    });
+  };
+
   public startTextEditing = ({
     sceneX,
     sceneY,
@@ -7038,6 +7069,7 @@ class App extends React.Component<AppProps, AppState> {
     autoEdit = true,
     initialCaretSceneCoords,
     arrowEndpoint,
+    startAtEnd = null,
   }: {
     /** X position to insert text at */
     sceneX: number;
@@ -7053,6 +7085,8 @@ class App extends React.Component<AppProps, AppState> {
      * dictates the text's position and alignment, overriding (sceneX, sceneY)
      */
     arrowEndpoint?: ArrowEndpoint | null;
+    /** excalidraw-web: start with the caret at the end, the text replaced when given */
+    startAtEnd?: { text?: string } | null;
   }) => {
     let shouldBindToContainer = false;
 
@@ -7117,7 +7151,8 @@ class App extends React.Component<AppProps, AppState> {
       shouldBindToContainer &&
       container &&
       !isArrowElement(container) &&
-      !isStickyNoteElement(container)
+      !isStickyNoteElement(container) &&
+      !container.keepsSize
     ) {
       const fontString = {
         fontSize,
@@ -7267,6 +7302,7 @@ class App extends React.Component<AppProps, AppState> {
         initialCaretSceneCoords: existingTextElement
           ? initialCaretSceneCoords
           : null,
+        startAtEnd,
       });
     } else {
       this.setState({
@@ -7571,6 +7607,62 @@ class App extends React.Component<AppProps, AppState> {
       },
     ];
   };
+
+  /**
+   * excalidraw-web: what the rotating selection's containers hold turns with
+   * them, about the selection's centre by the angle it has turned.
+   */
+  private rotateContainedElements = (
+    pointerDownState: PointerDownState,
+    selectedElements: readonly NonDeletedExcalidrawElement[],
+  ) => {
+    const turning = selectedElements.find(
+      (element) => !isFrameLikeElement(element),
+    );
+    const original =
+      turning && pointerDownState.originalElements.get(turning.id);
+    if (!turning || !original) {
+      return;
+    }
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    const [x1, y1, x2, y2] = getElementAbsoluteCoords(original, elementsMap);
+    const center =
+      selectedElements.length === 1
+        ? pointFrom<GlobalPoint>((x1 + x2) / 2, (y1 + y2) / 2)
+        : pointFrom<GlobalPoint>(
+            pointerDownState.resize.center.x,
+            pointerDownState.resize.center.y,
+          );
+    rotateContainedElements(
+      pointerDownState.originalElements,
+      getElementsContainedInDrag(
+        pointerDownState,
+        selectedElements,
+        this.scene,
+      ),
+      center,
+      (turning.angle - original.angle) as Radians,
+      this.scene,
+    );
+  };
+
+  /** excalidraw-web: whether the host offers this transform handle of the selection */
+  private isTransformHandleOffered = (
+    selectedElements: readonly NonDeletedExcalidrawElement[],
+    handleType: TransformHandleType,
+  ): boolean => {
+    const offered = this.props.transformHandlesOf?.(selectedElements) ?? "all";
+    return (
+      offered === "all" || (offered === "rotation" && handleType === "rotation")
+    );
+  };
+
+  /** excalidraw-web: whether a click on a member of a selected group selects it alone */
+  private entersGroupOnClick = (
+    element: NonDeletedExcalidrawElement,
+  ): boolean =>
+    !!getSelectedGroupIdForElement(element, this.state.selectedGroupIds) &&
+    (this.props.entersGroupOnClick?.(element) ?? false);
 
   /**
    * excalidraw-web: whether a press anywhere on `element` reaches its link,
@@ -8495,7 +8587,11 @@ class App extends React.Component<AppProps, AppState> {
           );
         if (
           elementWithTransformHandleType &&
-          elementWithTransformHandleType.transformHandleType
+          elementWithTransformHandleType.transformHandleType &&
+          this.isTransformHandleOffered(
+            selectedElements,
+            elementWithTransformHandleType.transformHandleType,
+          )
         ) {
           this.cursor.set(
             getCursorForResizingElement(elementWithTransformHandleType),
@@ -8516,7 +8612,10 @@ class App extends React.Component<AppProps, AppState> {
         event.pointerType,
         this.editorInterface,
       );
-      if (transformHandleType) {
+      if (
+        transformHandleType &&
+        this.isTransformHandleOffered(selectedElements, transformHandleType)
+      ) {
         this.cursor.set(
           getCursorForResizingElement({
             transformHandleType,
@@ -9682,7 +9781,14 @@ class App extends React.Component<AppProps, AppState> {
             this.scene.getNonDeletedElementsMap(),
             this.editorInterface,
           );
-        if (elementWithTransformHandleType != null) {
+        if (
+          elementWithTransformHandleType != null &&
+          elementWithTransformHandleType.transformHandleType &&
+          this.isTransformHandleOffered(
+            selectedElements,
+            elementWithTransformHandleType.transformHandleType,
+          )
+        ) {
           if (
             elementWithTransformHandleType.transformHandleType === "rotation"
           ) {
@@ -9703,7 +9809,7 @@ class App extends React.Component<AppProps, AppState> {
           }
         }
       } else if (selectedElements.length > 1) {
-        pointerDownState.resize.handleType = getTransformHandleTypeFromCoords(
+        const handleType = getTransformHandleTypeFromCoords(
           getCommonBounds(selectedElements),
           pointerDownState.origin.x,
           pointerDownState.origin.y,
@@ -9711,6 +9817,11 @@ class App extends React.Component<AppProps, AppState> {
           event.pointerType,
           this.editorInterface,
         );
+        pointerDownState.resize.handleType =
+          handleType &&
+          this.isTransformHandleOffered(selectedElements, handleType)
+            ? handleType
+            : false;
       }
       if (pointerDownState.resize.handleType) {
         pointerDownState.resize.isResizing = true;
@@ -11245,6 +11356,15 @@ class App extends React.Component<AppProps, AppState> {
         ) {
           return;
         }
+        if (
+          selectedElements.length > 0 &&
+          this.props.refusesDrag?.(selectedElements)
+        ) {
+          // excalidraw-web: a drag the host refuses is still a drag, so
+          // releasing it does not select as a click would
+          pointerDownState.drag.hasOccurred = true;
+          return;
+        }
 
         const selectedElementsHasAFrame = selectedElements.some((e) =>
           isFrameLikeElement(e),
@@ -12675,6 +12795,24 @@ class App extends React.Component<AppProps, AppState> {
               ),
             }));
           }
+        } else if (this.entersGroupOnClick(hitElement)) {
+          // a click on a member of a selected group selects it alone, as a
+          // double-click does
+          const groupId = getSelectedGroupIdForElement(
+            hitElement,
+            this.state.selectedGroupIds,
+          )!;
+          this.setState((prevState) => ({
+            ...selectGroupsForSelectedElements(
+              {
+                editingGroupId: groupId,
+                selectedElementIds: { [hitElement.id]: true },
+              },
+              this.scene.getNonDeletedElements(),
+              prevState,
+              this,
+            ),
+          }));
         } else {
           this.setState((prevState) => ({
             ...selectGroupsForSelectedElements(
@@ -14058,6 +14196,9 @@ class App extends React.Component<AppProps, AppState> {
         pointerDownState.resize.center.y,
       )
     ) {
+      if (transformHandleType === "rotation") {
+        this.rotateContainedElements(pointerDownState, selectedElements);
+      }
       const elementsToHighlight = new Set<NonDeletedExcalidrawElement>();
       selectedFrames.forEach((frame) => {
         getElementsInResizingFrame(

@@ -33,7 +33,12 @@ export const actionCopy = register<ClipboardEvent | null>({
     });
 
     try {
-      await copyToClipboard(elementsToCopy, app.files, event);
+      await copyToClipboard(
+        elementsToCopy,
+        app.files,
+        event,
+        app.props.clipboardTextOf?.(elementsToCopy) ?? undefined,
+      );
     } catch (error: any) {
       return {
         captureUpdate: CaptureUpdateAction.EVENTUALLY,

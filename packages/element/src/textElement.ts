@@ -90,7 +90,7 @@ export const redrawTextBoundingBox = (
 
   if (container || !textElement.autoResize) {
     maxWidth = container
-      ? getBoundTextMaxWidth(container, textElement)
+      ? getBoundTextWrapWidth(container, textElement)
       : textElement.width;
     boundTextUpdates.text = wrapText(
       textElement.originalText,
@@ -118,7 +118,12 @@ export const redrawTextBoundingBox = (
     );
     const maxContainerWidth = getBoundTextMaxWidth(container, textElement);
 
-    if (!isArrowElement(container) && metrics.height > maxContainerHeight) {
+    if (container.keepsSize) {
+      // the container's size is its own; text past it is hidden
+    } else if (
+      !isArrowElement(container) &&
+      metrics.height > maxContainerHeight
+    ) {
       const nextHeight = computeContainerDimensionForBoundText(
         metrics.height,
         container,
@@ -127,7 +132,7 @@ export const redrawTextBoundingBox = (
       updateOriginalContainerCache(container.id, nextHeight);
     }
 
-    if (metrics.width > maxContainerWidth) {
+    if (!container.keepsSize && metrics.width > maxContainerWidth) {
       const nextWidth = computeContainerDimensionForBoundText(
         metrics.width,
         container,
@@ -182,7 +187,7 @@ export const handleBindTextResize = (
     let text = textElement.text;
     let nextHeight = textElement.height;
     let nextWidth = textElement.width;
-    const maxWidth = getBoundTextMaxWidth(container, textElement);
+    const maxWidth = getBoundTextWrapWidth(container, textElement);
     const maxHeight = getBoundTextMaxHeight(container, textElement);
     let containerHeight = container.height;
     if (
@@ -205,7 +210,7 @@ export const handleBindTextResize = (
       nextWidth = metrics.width;
     }
     // increase height in case text element height exceeds
-    if (nextHeight > maxHeight) {
+    if (!container.keepsSize && nextHeight > maxHeight) {
       containerHeight = computeContainerDimensionForBoundText(
         nextHeight,
         container,
@@ -265,7 +270,16 @@ export const computeBoundTextPosition = (
 
   let x;
   let y;
-  if (boundTextElement.verticalAlign === VERTICAL_ALIGN.TOP) {
+  // text overflowing a container that keeps its size shows its first lines
+  // and the start of its lines; the rest is hidden past the outline
+  const overflowsHeight =
+    container.keepsSize && boundTextElement.height > maxContainerHeight;
+  const overflowsWidth =
+    container.keepsSize && boundTextElement.width > maxContainerWidth;
+  if (
+    boundTextElement.verticalAlign === VERTICAL_ALIGN.TOP ||
+    overflowsHeight
+  ) {
     y = containerCoords.y;
   } else if (boundTextElement.verticalAlign === VERTICAL_ALIGN.BOTTOM) {
     y = containerCoords.y + (maxContainerHeight - boundTextElement.height);
@@ -286,7 +300,7 @@ export const computeBoundTextPosition = (
       containerCoords.y +
       (maxContainerHeight / 2 - boundTextElement.height / 2);
   }
-  if (boundTextElement.textAlign === TEXT_ALIGN.LEFT) {
+  if (boundTextElement.textAlign === TEXT_ALIGN.LEFT || overflowsWidth) {
     x = containerCoords.x;
   } else if (boundTextElement.textAlign === TEXT_ALIGN.RIGHT) {
     x = containerCoords.x + (maxContainerWidth - boundTextElement.width);
@@ -560,6 +574,18 @@ export const getBoundTextMaxWidth = (
       2
   );
 };
+
+/**
+ * The width a container's text wraps at: its text area's width, or no limit
+ * when the container does not wrap its text (`wrapsText: false`).
+ */
+export const getBoundTextWrapWidth = (
+  container: ExcalidrawElement,
+  boundTextElement: ExcalidrawTextElement | null,
+) =>
+  container.wrapsText === false
+    ? Infinity
+    : getBoundTextMaxWidth(container, boundTextElement);
 
 export const getBoundTextMaxHeight = (
   container: ExcalidrawElement,

@@ -4,7 +4,7 @@ import { KEYS, reseed } from "@excalidraw/common";
 import { Excalidraw } from "@excalidraw/excalidraw";
 
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
-import { Keyboard, Pointer } from "@excalidraw/excalidraw/tests/helpers/ui";
+import { Keyboard, Pointer, UI } from "@excalidraw/excalidraw/tests/helpers/ui";
 import {
   render,
   unmountComponent,
@@ -603,5 +603,98 @@ describe("moving a container moves what it contains", () => {
     expect(rectangles).toHaveLength(2);
     const xs = rectangles.map((rectangle) => rectangle.x).sort((a, b) => a - b);
     expect(xs).toEqual([0, 100]);
+  });
+});
+
+describe("rotating a container rotates what it contains", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    reseed(7);
+    mouse.reset();
+    await render(<Excalidraw handleKeyboardGlobally />);
+  });
+
+  /** The centre of an element as it is now in the scene. */
+  const centerOf = (element: ExcalidrawElement) => {
+    const current = API.getElement(element);
+    return [current.x + current.width / 2, current.y + current.height / 2];
+  };
+
+  const container = () =>
+    API.createElement({
+      id: "container",
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+    });
+  const inside = () =>
+    API.createElement({
+      id: "inside",
+      type: "ellipse",
+      x: 20,
+      y: 20,
+      width: 40,
+      height: 40,
+    });
+  const outside = () =>
+    API.createElement({
+      id: "outside",
+      type: "ellipse",
+      x: 400,
+      y: 20,
+      width: 40,
+      height: 40,
+    });
+
+  it("turns the contents about the container's centre by the same angle", () => {
+    const rectangle = container();
+    const held = inside();
+    const away = outside();
+    API.setElements([rectangle, held, away]);
+
+    UI.rotate(rectangle, [100, 100]);
+
+    const angle = API.getElement(rectangle).angle;
+    expect(angle).not.toBe(0);
+    expect(API.getElement(held).angle).toBeCloseTo(angle);
+    // the contents' centre (40, 40) turns about the container's (100, 50)
+    const [hx, hy] = centerOf(held);
+    expect(hx).toBeCloseTo(
+      100 + (40 - 100) * Math.cos(angle) - (40 - 50) * Math.sin(angle),
+    );
+    expect(hy).toBeCloseTo(
+      50 + (40 - 100) * Math.sin(angle) + (40 - 50) * Math.cos(angle),
+    );
+    expect(API.getElement(away)).toMatchObject({ x: 400, y: 20, angle: 0 });
+  });
+
+  it("turns the contents of a container rotated within a multiple selection", () => {
+    const rectangle = container();
+    const held = inside();
+    const away = outside();
+    API.setElements([rectangle, held, away]);
+
+    UI.rotate([rectangle, away], [100, 100]);
+
+    expect(API.getElement(held).angle).toBeCloseTo(
+      API.getElement(rectangle).angle,
+    );
+    expect(API.getElement(held).angle).not.toBe(0);
+  });
+
+  it("puts the container and its contents back with one undo", () => {
+    const rectangle = container();
+    const held = inside();
+    API.setElements([rectangle, held]);
+
+    // a click records the scene as history's starting point, as dragBy does
+    mouse.clickAt(rectangle.x, rectangle.y);
+    UI.rotate(rectangle, [100, 100]);
+    Keyboard.undo();
+
+    expect(API.getElement(rectangle).angle).toBe(0);
+    expect(API.getElement(held)).toMatchObject({ x: 20, y: 20, angle: 0 });
   });
 });

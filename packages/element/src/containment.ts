@@ -62,7 +62,7 @@ const rotateAboutCenter = (
 ): GlobalPoint => pointRotateRads(point, center, angle);
 
 /** The points that trace an element's outline, in scene coordinates. */
-const getOutlinePoints = (
+export const getOutlinePoints = (
   element: ExcalidrawElement,
   elementsMap: ElementsMap,
 ): GlobalPoint[] => {
@@ -256,6 +256,49 @@ export const getContainedElements = (
   }
 
   return Array.from(contained);
+};
+
+const keptSizeHoldersCache = new WeakMap<
+  ElementsMap,
+  Map<ExcalidrawElement["id"], NonDeletedExcalidrawElement[]>
+>();
+
+/**
+ * For each element held by containers that keep their size (`keepsSize`),
+ * those containers, outermost first: what such a container holds, by the
+ * rule that decides what moves with it, is drawn clipped to its outline.
+ * Worked out once per `elementsMap`.
+ */
+export const getKeptSizeHolders = (
+  elementsMap: ElementsMap,
+): Map<ExcalidrawElement["id"], NonDeletedExcalidrawElement[]> => {
+  const cached = keptSizeHoldersCache.get(elementsMap);
+  if (cached) {
+    return cached;
+  }
+  const holders = new Map<
+    ExcalidrawElement["id"],
+    NonDeletedExcalidrawElement[]
+  >();
+  const allElements = Array.from(elementsMap.values()).filter(
+    (element): element is NonDeletedExcalidrawElement => !element.isDeleted,
+  );
+  const containers = allElements.filter(
+    (element) => element.keepsSize && isContainerShape(element),
+  );
+  // larger containers first, so an element's list runs outermost first
+  containers.sort((a, b) => b.width * b.height - a.width * a.height);
+  for (const container of containers) {
+    for (const held of getContainedElements(
+      [container],
+      allElements,
+      elementsMap,
+    )) {
+      holders.set(held.id, [...(holders.get(held.id) ?? []), container]);
+    }
+  }
+  keptSizeHoldersCache.set(elementsMap, holders);
+  return holders;
 };
 
 /**

@@ -27,6 +27,7 @@ import {
   getBoundTextElement,
   getBoundTextMaxHeight,
   getBoundTextMaxWidth,
+  getBoundTextWrapWidth,
   redrawTextBoundingBox,
 } from "@excalidraw/element";
 
@@ -383,7 +384,7 @@ export const adjustBoundTextSize = (
   const wrappedText = wrapText(
     boundText.text,
     getFontString(boundText),
-    maxWidth,
+    getBoundTextWrapWidth(container, boundText),
   );
 
   let metrics = measureText(
@@ -393,7 +394,9 @@ export const adjustBoundTextSize = (
   );
 
   let nextFontSize = boundText.fontSize;
+  // a container that keeps its size hides overflowing text instead
   while (
+    !container.keepsSize &&
     (metrics.width > maxWidth || metrics.height > maxHeight) &&
     nextFontSize > 0
   ) {

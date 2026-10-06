@@ -9,6 +9,7 @@ import { isArrowElement } from "@excalidraw/element";
 import type {
   ExcalidrawElement,
   NonDeletedElementsMap,
+  NonDeletedExcalidrawElement,
   NonDeletedSceneElementsMap,
 } from "@excalidraw/element/types";
 
@@ -191,6 +192,11 @@ export const SelectedShapeActions = ({
       {predicates.arrowheads && <>{renderAction("changeArrowhead")}</>}
 
       {predicates.opacity && renderAction("changeOpacity")}
+
+      {/* excalidraw-web: the host's own sections for the selection */}
+      {app.props.shapePanelSections?.(
+        targetElements as readonly NonDeletedExcalidrawElement[],
+      )}
 
       {predicates.layers && <LayersFieldset renderAction={renderAction} />}
 

@@ -497,6 +497,46 @@ const rotateMultipleElements = (
   scene.triggerUpdate();
 };
 
+/**
+ * excalidraw-web: turns what rotating containers hold along with them, by
+ * `angle` about `center` from where each element was when the gesture
+ * began, its text included, so a container's contents keep their place in
+ * it.
+ */
+export const rotateContainedElements = (
+  originalElements: PointerDownState["originalElements"],
+  containedElements: readonly NonDeletedExcalidrawElement[],
+  center: GlobalPoint,
+  angle: Radians,
+  scene: Scene,
+) => {
+  const elementsMap = scene.getNonDeletedElementsMap();
+  for (const element of containedElements) {
+    const original = originalElements.get(element.id);
+    if (!original || isFrameLikeElement(element)) {
+      continue;
+    }
+    const [x1, y1, x2, y2] = getElementAbsoluteCoords(original, elementsMap);
+    const originalCenter = pointFrom<GlobalPoint>((x1 + x2) / 2, (y1 + y2) / 2);
+    const [rotatedX, rotatedY] = pointRotateRads(originalCenter, center, angle);
+    scene.mutateElement(element, {
+      x: original.x + (rotatedX - originalCenter[0]),
+      y: original.y + (rotatedY - originalCenter[1]),
+      angle: normalizeRadians((original.angle + angle) as Radians),
+    });
+    updateBoundElements(element, scene, {
+      simultaneouslyUpdated: containedElements,
+    });
+    const boundText = getBoundTextElement(element, elementsMap);
+    if (boundText && !isArrowElement(element)) {
+      scene.mutateElement(boundText, {
+        ...computeBoundTextPosition(element, boundText, elementsMap),
+        angle: element.angle,
+      });
+    }
+  }
+};
+
 export const getResizeOffsetXY = (
   transformHandleType: MaybeTransformHandleType,
   selectedElements: NonDeletedExcalidrawElement[],
