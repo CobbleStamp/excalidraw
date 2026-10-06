@@ -25,7 +25,7 @@ import {
 } from "@excalidraw/element";
 import { LinearElementEditor } from "@excalidraw/element";
 import { getBoundTextElement, getContainerElement } from "@excalidraw/element";
-import { getOutlinePoints } from "@excalidraw/element";
+import { getKeptSizeHolders, getOutlinePoints } from "@excalidraw/element";
 import { getLineHeightInPx } from "@excalidraw/element";
 import {
   isArrowElement,
@@ -96,12 +96,13 @@ const maybeWrapNodesInFrameClipPath = (
 };
 
 /**
- * Moves the nodes appended to `root` since `firstNewNode` into a group
- * clipped to `element`'s outline (sharp-cornered), so what they draw past
- * it is hidden.
+ * Moves the nodes appended to `root` since `firstNewNode`, which draw
+ * `clipped`, into a group clipped to `element`'s outline (sharp-cornered),
+ * so what they draw past it is hidden.
  */
 const clipNewNodesToOutline = (
   element: Readonly<NonDeletedExcalidrawElement>,
+  clipped: Readonly<NonDeletedExcalidrawElement>,
   root: SVGElement,
   firstNewNode: number,
   elementsMap: RenderableElementsMap,
@@ -113,7 +114,7 @@ const clipNewNodesToOutline = (
   }
   const doc = root.ownerDocument;
   const clipPath = doc.createElementNS(SVG_NS, "clipPath");
-  const clipId = `outline-${element.id}-${firstNewNode}`;
+  const clipId = `outline-${element.id}-${clipped.id}`;
   clipPath.setAttribute("id", clipId);
   const polygon = doc.createElementNS(SVG_NS, "polygon");
   polygon.setAttribute(
@@ -898,6 +899,26 @@ export const renderSceneToSvg = (
     return;
   }
 
+  // what a container that keeps its size holds is hidden past its outline,
+  // innermost clip first, each wrapping the last
+  const keptSizeHolders = getKeptSizeHolders(elementsMap);
+  const clipToKeptSizeHolders = (
+    element: NonDeletedExcalidrawElement,
+    firstNode: number,
+  ) => {
+    const holders = keptSizeHolders.get(element.id) ?? [];
+    for (const holder of [...holders].reverse()) {
+      clipNewNodesToOutline(
+        holder,
+        element,
+        svgRoot,
+        firstNode,
+        elementsMap,
+        renderConfig,
+      );
+    }
+  };
+
   // render elements
   elements
     .filter((el) => !isIframeLikeElement(el))
@@ -913,6 +934,7 @@ export const renderSceneToSvg = (
         }
 
         try {
+          const firstNode = svgRoot.childNodes.length;
           renderElementToSvg(
             element,
             elementsMap,
@@ -941,6 +963,7 @@ export const renderSceneToSvg = (
               // text past the outline of a container that keeps its size is hidden
               clipNewNodesToOutline(
                 element,
+                boundTextElement as Readonly<NonDeletedExcalidrawElement>,
                 svgRoot,
                 firstTextNode,
                 elementsMap,
@@ -953,6 +976,7 @@ export const renderSceneToSvg = (
               "[NONDELETED][INVARIANT] Skipped rendering deleted bound text element",
             );
           }
+          clipToKeptSizeHolders(element, firstNode);
         } catch (error: any) {
           console.error(error);
         }
@@ -965,6 +989,7 @@ export const renderSceneToSvg = (
     .forEach((element) => {
       if (!element.isDeleted) {
         try {
+          const firstNode = svgRoot.childNodes.length;
           renderElementToSvg(
             element,
             elementsMap,
@@ -975,6 +1000,7 @@ export const renderSceneToSvg = (
             element.y + renderConfig.offsetY,
             renderConfig,
           );
+          clipToKeptSizeHolders(element, firstNode);
         } catch (error: any) {
           console.error(error);
         }

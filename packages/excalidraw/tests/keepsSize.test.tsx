@@ -5,18 +5,20 @@
  */
 import React from "react";
 
-import { KEYS, VERTICAL_ALIGN } from "@excalidraw/common";
+import { arrayToMap, KEYS, VERTICAL_ALIGN } from "@excalidraw/common";
 import { exportToCanvas } from "@excalidraw/utils";
 
 import {
   computeBoundTextPosition,
   getContainerCoords,
+  getKeptSizeHolders,
   redrawTextBoundingBox,
 } from "@excalidraw/element";
 
 import type {
   ExcalidrawElement,
   ExcalidrawTextElementWithContainer,
+  NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";
@@ -34,7 +36,10 @@ unmountComponent();
 const LONG_TEXT = new Array(40).fill("line").join("\n");
 const WIDE_TEXT = new Array(40).fill("word").join(" ");
 
-const typeInto = async (container: ExcalidrawElement, text: string) => {
+const typeInto = async (
+  container: NonDeletedExcalidrawElement,
+  text: string,
+) => {
   API.setSelectedElements([container]);
   Keyboard.keyPress(KEYS.ENTER);
   const editor = await getTextEditor();
@@ -130,10 +135,7 @@ describe("a container that keeps its size", () => {
       width: 400,
       height: 900,
     }) as ExcalidrawTextElementWithContainer;
-    const elementsMap = new Map([
-      [cell.id, cell],
-      [text.id, text],
-    ]);
+    const elementsMap = arrayToMap<ExcalidrawElement>([cell, text]);
 
     expect(computeBoundTextPosition(cell, text, elementsMap)).toEqual(
       getContainerCoords(cell),
@@ -197,6 +199,79 @@ describe("a container that keeps its size", () => {
     expect(clipPath.querySelector("polygon")).not.toBeNull();
     const group = svg.querySelector(`g[clip-path="url(#${clipPath.id})"]`)!;
     expect(group.querySelector("text")).not.toBeNull();
+  });
+});
+
+describe("what a container that keeps its size holds", () => {
+  const cellWith = (keepsSize: boolean) => ({
+    ...API.createElement({
+      type: "rectangle",
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 60,
+    }),
+    keepsSize,
+  });
+  const inside = () =>
+    API.createElement({
+      type: "ellipse",
+      x: 10,
+      y: 10,
+      width: 40,
+      height: 40,
+    });
+
+  it("is the elements the container carries when it moves", () => {
+    const cell = cellWith(true);
+    const held = inside();
+    const across = API.createElement({
+      type: "ellipse",
+      x: 140,
+      y: 10,
+      width: 40,
+      height: 40,
+    });
+    const holders = getKeptSizeHolders(arrayToMap([cell, held, across]));
+
+    expect(holders.get(held.id)).toEqual([cell]);
+    expect(holders.has(across.id)).toBe(false);
+    expect(getKeptSizeHolders(arrayToMap([cellWith(false), held])).size).toBe(
+      0,
+    );
+  });
+
+  it("is hidden past its outline on the canvas", async () => {
+    const clipsDrawing = async (keepsSize: boolean) => {
+      const canvas = await exportToCanvas({
+        elements: [cellWith(keepsSize), inside()],
+        files: {},
+      });
+      return (
+        canvas.getContext("2d")!.clip as unknown as {
+          mock: { calls: unknown[] };
+        }
+      ).mock.calls.length;
+    };
+
+    expect(await clipsDrawing(true)).toBe(1);
+    expect(await clipsDrawing(false)).toBe(0);
+  });
+
+  it("is hidden past its outline in SVG", async () => {
+    const cell = cellWith(true);
+    const held = inside();
+    const svg = await exportToSvg(
+      [cell, held],
+      { exportBackground: false, viewBackgroundColor: "#ffffff" },
+      {},
+    );
+
+    const group = svg.querySelector(
+      `g[clip-path="url(#outline-${cell.id}-${held.id})"]`,
+    );
+    expect(group?.querySelector("path, ellipse")).not.toBeNull();
+    expect(svg.querySelector(`#outline-${cell.id}-${held.id}`)).not.toBeNull();
   });
 });
 

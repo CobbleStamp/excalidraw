@@ -26,7 +26,7 @@ import {
 } from "@excalidraw/element";
 
 import { getElementAbsoluteCoords } from "@excalidraw/element";
-import { getOutlinePoints } from "@excalidraw/element";
+import { getKeptSizeHolders, getOutlinePoints } from "@excalidraw/element";
 
 import type { ElementRenderState } from "@excalidraw/element";
 
@@ -414,6 +414,16 @@ const _renderStaticScene = ({
     }
   };
 
+  // what a container that keeps its size holds is hidden past its outline
+  const keptSizeHolders = getKeptSizeHolders(allElementsMap);
+  const clipElementToKeptSizeHolders = (
+    element: NonDeletedExcalidrawElement,
+  ) => {
+    for (const holder of keptSizeHolders.get(element.id) ?? []) {
+      outlineClip(holder, context, appState, allElementsMap);
+    }
+  };
+
   // Paint visible elements
   visibleElements
     .filter((el) => !isIframeLikeElement(el))
@@ -433,6 +443,7 @@ const _renderStaticScene = ({
 
         const renderState = getRenderState(element);
         clipElementToFrame(element, renderState);
+        clipElementToKeptSizeHolders(element);
         renderElement(
           element,
           elementsMap,
@@ -499,6 +510,7 @@ const _renderStaticScene = ({
         const renderState = getRenderState(element);
         context.save();
         clipElementToFrame(element, renderState);
+        clipElementToKeptSizeHolders(element);
         renderElement(
           element,
           elementsMap,
