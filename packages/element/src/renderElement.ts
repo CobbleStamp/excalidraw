@@ -525,7 +525,13 @@ const drawElementOnCanvas = (
         ? cacheEntry?.image
         : undefined;
 
-      if (img != null && !(img instanceof Promise)) {
+      // an image whose file could not be saved shows as broken everywhere,
+      // even where its picture is held, as in the tab that added it
+      if (
+        img != null &&
+        !(img instanceof Promise) &&
+        element.status !== "error"
+      ) {
         if (element.roundness && context.roundRect) {
           context.beginPath();
           context.roundRect(
