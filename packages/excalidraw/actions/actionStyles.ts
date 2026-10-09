@@ -152,6 +152,7 @@ export const actionPasteStyles = register({
               const newTextElement = newElementWith(newElement, {
                 ...getBaseFontSizeUpdate(newElement, fontSize, elementsMap),
                 fontFamily,
+                bold: sourceText.bold === true,
                 textAlign: sourceText.textAlign || DEFAULT_TEXT_ALIGN,
                 lineHeight: sourceText.lineHeight || getLineHeight(fontFamily),
               });

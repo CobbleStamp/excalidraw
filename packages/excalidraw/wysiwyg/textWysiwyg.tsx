@@ -66,6 +66,7 @@ import {
 import {
   actionDecreaseFontSize,
   actionIncreaseFontSize,
+  actionToggleBold,
 } from "../actions/actionProperties";
 import {
   actionResetZoom,
@@ -262,6 +263,11 @@ export const textWysiwyg = ({
       return true;
     }
     if (`${updatedTextElement.fontSize}px` !== editable.style.fontSize) {
+      return true;
+    }
+    // excalidraw-web: bold, which the font shorthand reads back as "bold" or "700", by browser
+    const isEditableBold = ["bold", "700"].includes(editable.style.fontWeight);
+    if (!!updatedTextElement.bold !== isEditableBold) {
       return true;
     }
     return false;
@@ -652,6 +658,10 @@ export const textWysiwyg = ({
             isStickyNoteElement(container) && boundTextElement
               ? boundTextElement.fontFamily
               : app.state.currentItemFontFamily,
+          bold:
+            isStickyNoteElement(container) && boundTextElement
+              ? boundTextElement.bold
+              : app.state.currentItemBold,
         });
         const maxWidth = getBoundTextMaxWidth(container, boundTextElement);
         const { selectionStart, selectionEnd, value } = editable;
@@ -698,6 +708,10 @@ export const textWysiwyg = ({
       app.actionManager.executeAction(actionDecreaseFontSize);
     } else if (actionIncreaseFontSize.keyTest(event)) {
       app.actionManager.executeAction(actionIncreaseFontSize);
+    } else if (actionToggleBold.keyTest(event)) {
+      // excalidraw-web: the browser's own Ctrl/Cmd+B, such as Firefox's bookmarks, is not wanted
+      event.preventDefault();
+      app.actionManager.executeAction(actionToggleBold);
     } else if (event.key === KEYS.ESCAPE) {
       event.preventDefault();
       submittedViaKeyboard = true;

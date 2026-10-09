@@ -20,6 +20,7 @@ export {
   actionChangeFontSize,
   actionChangeFontFamily,
   actionChangeTextAlign,
+  actionToggleBold,
   actionChangeVerticalAlign,
   actionChangeArrowProperties,
 } from "./actionProperties";

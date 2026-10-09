@@ -4,9 +4,14 @@ import { subsetWoff2GlyphsByCodepoints } from "../subset/subset-main";
 
 type DataURL = string;
 
+/** excalidraw-web: the weight a font's bold face is registered under, which bold text asks for */
+export const BOLD_FONT_WEIGHT = "700";
+
 export class ExcalidrawFontFace {
   public readonly urls: URL[] | DataURL[];
   public readonly fontFace: FontFace;
+  /** excalidraw-web: the weight the face is registered under, as given, whatever the browser reads back */
+  public readonly weight: string;
 
   private static readonly ASSETS_FALLBACK_URL = `https://esm.sh/${
     import.meta.env.PKG_NAME
@@ -21,12 +26,19 @@ export class ExcalidrawFontFace {
       .map((url) => `url(${url}) ${ExcalidrawFontFace.getFormat(url)}`)
       .join(", ");
 
-    this.fontFace = new FontFace(family, sources, {
+    const fullDescriptors: FontFaceDescriptors = {
       display: "swap",
       style: "normal",
       weight: "400",
       ...descriptors,
-    });
+    };
+    this.weight = fullDescriptors.weight!;
+    this.fontFace = new FontFace(family, sources, fullDescriptors);
+  }
+
+  /** excalidraw-web: whether this is a family's bold face, needed only by bold text */
+  public get isBold(): boolean {
+    return this.weight === BOLD_FONT_WEIGHT;
   }
 
   /**
@@ -46,7 +58,7 @@ export class ExcalidrawFontFace {
 
     return this.getContent(codepoints).then(
       (content) =>
-        `@font-face { font-family: ${this.fontFace.family}; src: url(${content}); }`,
+        `@font-face { font-family: ${this.fontFace.family}; font-weight: ${this.weight}; src: url(${content}); }`,
     );
   }
 

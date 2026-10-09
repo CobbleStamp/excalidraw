@@ -354,6 +354,7 @@ export const newTextElement = (
     originalText?: string;
     fontSize?: number;
     fontFamily?: FontFamilyValues;
+    bold?: ExcalidrawTextElement["bold"];
     textAlign?: TextAlign;
     verticalAlign?: VerticalAlign;
     containerId?: ExcalidrawTextContainer["id"] | null;
@@ -369,7 +370,7 @@ export const newTextElement = (
   const text = normalizeText(opts.text);
   const metrics = measureText(
     text,
-    getFontString({ fontFamily, fontSize }),
+    getFontString({ fontFamily, fontSize, bold: opts.bold }),
     lineHeight,
   );
   const textAlign = opts.textAlign || DEFAULT_TEXT_ALIGN;
@@ -385,6 +386,8 @@ export const newTextElement = (
     fontSize,
     baseFontSize: opts.baseFontSize ?? null,
     fontFamily,
+    // excalidraw-web: only bold text carries the field: a regular one has none, as before bold
+    ...(opts.bold ? { bold: true } : {}),
     textAlign,
     verticalAlign,
     x: opts.x - offsets.x,

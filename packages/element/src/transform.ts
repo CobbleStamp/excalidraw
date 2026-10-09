@@ -98,6 +98,7 @@ export type ValidLinearElement = {
     text: string;
     fontSize?: number;
     fontFamily?: FontFamilyValues;
+    bold?: boolean;
     textAlign?: TextAlign;
     verticalAlign?: VerticalAlign;
   } & FragmentConstructorOpts;
@@ -195,6 +196,7 @@ export type ValidContainer =
         text: string;
         fontSize?: number;
         fontFamily?: FontFamilyValues;
+        bold?: boolean;
         textAlign?: TextAlign;
         verticalAlign?: VerticalAlign;
       } & FragmentConstructorOpts;
@@ -650,7 +652,7 @@ export const convertToExcalidrawElements = (
         const normalizedText = normalizeText(text);
         const metrics = measureText(
           normalizedText,
-          getFontString({ fontFamily, fontSize }),
+          getFontString({ fontFamily, fontSize, bold: element.bold }),
           lineHeight,
         );
 

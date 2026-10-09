@@ -455,6 +455,8 @@ export interface AppState {
   currentItemStrokeVariability: StrokeVariability;
   currentItemOpacity: number;
   currentItemFontFamily: FontFamilyValues;
+  /** excalidraw-web: whether new text is bold */
+  currentItemBold: boolean;
   currentItemFontSize: number;
   currentItemTextAlign: TextAlign;
   currentItemStartArrowhead: Arrowhead | null;

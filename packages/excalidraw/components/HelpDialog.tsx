@@ -506,6 +506,10 @@ export const HelpDialog = ({ onClose }: { onClose?: () => void }) => {
               label={t("labels.increaseFontSize")}
               shortcuts={[getShortcutKey("CtrlOrCmd+Shift+>")]}
             />
+            <Shortcut
+              label={t("labels.bold")}
+              shortcuts={[getShortcutKey("CtrlOrCmd+B")]}
+            />
           </ShortcutIsland>
         </Section>
       </Dialog>

@@ -20,7 +20,8 @@ export const measureText = (
     // lines would be stripped from computation
     .map((x) => x || " ")
     .join("\n");
-  const fontSize = parseFloat(font);
+  // excalidraw-web: the size, wherever it is: a bold font starts with its weight
+  const fontSize = parseFloat(font.match(/(\d+(?:\.\d+)?)px/)?.[1] ?? "");
   const height = getTextHeight(_text, fontSize, lineHeight);
   const width = getTextWidth(_text, font);
   return { width, height };
