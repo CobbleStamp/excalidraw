@@ -272,6 +272,11 @@ export type ExcalidrawTextElement = _ExcalidrawElementBase &
     fontSize: number;
     fontFamily: FontFamilyValues;
     /**
+     * excalidraw-web: `true` draws the whole text bold. Missing or `false` draws it regular,
+     * so files from before bold, and from Excalidraw, open unchanged.
+     */
+    bold?: boolean;
+    /**
      * The font size the user picked, from which the layout derives `fontSize`.
      * Today only sticky note labels have one: the auto-fit shrinks below it
      * and never above it (compare `baseHeight`, which the note grows above).

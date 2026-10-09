@@ -204,6 +204,7 @@ export class API {
     text?: T extends "text" ? ExcalidrawTextElement["text"] : never;
     fontSize?: T extends "text" ? ExcalidrawTextElement["fontSize"] : never;
     fontFamily?: T extends "text" ? ExcalidrawTextElement["fontFamily"] : never;
+    bold?: T extends "text" ? ExcalidrawTextElement["bold"] : never;
     textAlign?: T extends "text" ? ExcalidrawTextElement["textAlign"] : never;
     verticalAlign?: T extends "text"
       ? ExcalidrawTextElement["verticalAlign"]
@@ -358,6 +359,7 @@ export class API {
           text: rest.text || "test",
           fontSize,
           fontFamily,
+          bold: rest.bold,
           textAlign: rest.textAlign ?? appState.currentItemTextAlign,
           verticalAlign: rest.verticalAlign ?? DEFAULT_VERTICAL_ALIGN,
           containerId: rest.containerId ?? undefined,

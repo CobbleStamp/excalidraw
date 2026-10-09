@@ -587,6 +587,11 @@ export const restoreElement = (
           ? normalizeStickyNoteFontSize(element.baseFontSize)
           : null,
       });
+      if ("bold" in element && typeof element.bold !== "boolean") {
+        // excalidraw-web: a bold that is not true or false is not ours: the text stays regular
+        const { bold: _unknownBold, ...regularText } = element;
+        element = regularText;
+      }
 
       // if empty text, mark as deleted. We keep in array
       // for data integrity purposes (collab etc.)

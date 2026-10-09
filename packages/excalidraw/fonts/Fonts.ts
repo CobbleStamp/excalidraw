@@ -155,10 +155,14 @@ export class Fonts {
     const charsPerFamily = Fonts.getCharsPerFamily(
       this.scene.getNonDeletedElements(),
     );
+    const boldFamilies = Fonts.getBoldFamilies(
+      this.scene.getNonDeletedElements(),
+    );
 
     return Fonts.loadFontFaces(
       sceneFamilies,
       charsPerFamily,
+      boldFamilies,
       this.ownerDocument,
     );
   };
@@ -172,8 +176,14 @@ export class Fonts {
   ): Promise<FontFace[]> => {
     const fontFamilies = Fonts.getUniqueFamilies(elements);
     const charsPerFamily = Fonts.getCharsPerFamily(elements);
+    const boldFamilies = Fonts.getBoldFamilies(elements);
 
-    return Fonts.loadFontFaces(fontFamilies, charsPerFamily, ownerDocument);
+    return Fonts.loadFontFaces(
+      fontFamilies,
+      charsPerFamily,
+      boldFamilies,
+      ownerDocument,
+    );
   };
 
   /**
@@ -184,6 +194,7 @@ export class Fonts {
   ) {
     const families = Fonts.getUniqueFamilies(elements);
     const charsPerFamily = Fonts.getCharsPerFamily(elements);
+    const boldFamilies = Fonts.getBoldFamilies(elements);
 
     // for simplicity, assuming we have just one family with the CJK handdrawn fallback
     const familyWithCJK = families.find((x) =>
@@ -208,7 +219,11 @@ export class Fonts {
     // don't trigger hundreds of concurrent requests (each performing fetch, creating a worker, etc.),
     // instead go three requests at a time, in a controlled manner, without completely blocking the main thread
     // and avoiding potential issues such as rate limits
-    const iterator = Fonts.fontFacesStylesGenerator(families, charsPerFamily);
+    const iterator = Fonts.fontFacesStylesGenerator(
+      families,
+      charsPerFamily,
+      boldFamilies,
+    );
     const concurrency = 3;
     const fontFaces = await new PromisePool(iterator, concurrency).all();
 
@@ -219,6 +234,7 @@ export class Fonts {
   private static async loadFontFaces(
     fontFamilies: Array<ExcalidrawTextElement["fontFamily"]>,
     charsPerFamily: Record<number, Set<string>>,
+    boldFamilies: ReadonlySet<number>,
     ownerDocument: Document,
   ) {
     // add all registered font faces into the `document.fonts` (if not added already)
@@ -239,6 +255,7 @@ export class Fonts {
     const iterator = Fonts.fontFacesLoader(
       fontFamilies,
       charsPerFamily,
+      boldFamilies,
       ownerDocument,
     );
     const concurrency = 10;
@@ -249,19 +266,34 @@ export class Fonts {
   private static *fontFacesLoader(
     fontFamilies: Array<ExcalidrawTextElement["fontFamily"]>,
     charsPerFamily: Record<number, Set<string>>,
+    boldFamilies: ReadonlySet<number>,
     ownerDocument: Document,
   ): Generator<Promise<void | readonly [number, FontFace[]]>> {
-    for (const [index, fontFamily] of fontFamilies.entries()) {
-      const font = getFontString({
-        fontFamily,
-        fontSize: FONT_SIZES.sm,
-      });
+    // excalidraw-web: each load needs its own index, as the pool keeps one result per index
+    let loadCount: number = 0;
 
+    for (const fontFamily of fontFamilies) {
       // WARN: without "text" param it does not have to mean that all font faces are loaded as it could be just one irrelevant font face!
       // instead, we are always checking chars used in the family, so that no required font faces remain unloaded
       const text = Fonts.getCharacters(charsPerFamily, fontFamily);
+      // excalidraw-web: a family's bold faces are loaded only when some of its text is bold
+      const weights: boolean[] = boldFamilies.has(fontFamily)
+        ? [false, true]
+        : [false];
 
-      if (!ownerDocument.fonts.check(font, text)) {
+      for (const bold of weights) {
+        const font = getFontString({
+          fontFamily,
+          fontSize: FONT_SIZES.sm,
+          bold,
+        });
+
+        if (ownerDocument.fonts.check(font, text)) {
+          continue;
+        }
+
+        const index: number = loadCount++;
+
         yield promiseTry(async () => {
           try {
             // WARN: browser prioritizes loading only font faces with unicode ranges for characters which are present in the document (html & canvas), other font faces could stay unloaded
@@ -286,6 +318,7 @@ export class Fonts {
   private static *fontFacesStylesGenerator(
     families: Array<number>,
     charsPerFamily: Record<number, Set<string>>,
+    boldFamilies: ReadonlySet<number>,
   ): Generator<Promise<void | readonly [number, string]>> {
     for (const [familyIndex, family] of families.entries()) {
       const { fontFaces, metadata } = Fonts.registered.get(family) ?? {};
@@ -304,6 +337,11 @@ export class Fonts {
       }
 
       for (const [fontFaceIndex, fontFace] of fontFaces.entries()) {
+        // excalidraw-web: a bold face is embedded only when some of the family's text is bold
+        if (fontFace.isBold && !boldFamilies.has(family)) {
+          continue;
+        }
+
         yield promiseTry(async () => {
           try {
             const characters = Fonts.getCharacters(charsPerFamily, family);
@@ -429,6 +467,23 @@ export class Fonts {
         return families;
       }, new Set<number>()),
     );
+  }
+
+  /**
+   * excalidraw-web: get the font families that some of the given text is bold in.
+   */
+  private static getBoldFamilies(
+    elements: ReadonlyArray<ExcalidrawElement>,
+  ): Set<number> {
+    const boldFamilies: Set<number> = new Set();
+
+    for (const element of elements) {
+      if (isTextElement(element) && element.bold) {
+        boldFamilies.add(element.fontFamily);
+      }
+    }
+
+    return boldFamilies;
   }
 
   /**

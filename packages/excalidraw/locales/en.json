@@ -44,6 +44,8 @@
     "opacity": "Opacity",
     "polygonSides": "Corners",
     "textAlign": "Text align",
+    "textStyle": "Text style",
+    "bold": "Bold",
     "edges": "Edges",
     "sharp": "Sharp",
     "round": "Round",

@@ -5098,6 +5098,7 @@ class App extends React.Component<AppProps, AppState> {
       text,
       fontSize: this.state.currentItemFontSize,
       fontFamily: this.state.currentItemFontFamily,
+      bold: this.state.currentItemBold,
       textAlign: DEFAULT_TEXT_ALIGN,
       verticalAlign: DEFAULT_VERTICAL_ALIGN,
       locked: false,
@@ -5105,6 +5106,7 @@ class App extends React.Component<AppProps, AppState> {
     const fontString = getFontString({
       fontSize: textElementProps.fontSize,
       fontFamily: textElementProps.fontFamily,
+      bold: textElementProps.bold,
     });
     const lineHeight = getLineHeight(textElementProps.fontFamily);
     const [x1, , x2] = getVisibleSceneBounds(this.state);
@@ -7146,6 +7148,7 @@ class App extends React.Component<AppProps, AppState> {
     const lineHeight =
       existingTextElement?.lineHeight || getLineHeight(fontFamily);
     const fontSize = this.state.currentItemFontSize;
+    const bold = this.state.currentItemBold;
 
     if (
       !existingTextElement &&
@@ -7158,6 +7161,7 @@ class App extends React.Component<AppProps, AppState> {
       const fontString = {
         fontSize,
         fontFamily,
+        bold,
       };
       const minWidth = getApproxMinLineWidth(
         getFontString(fontString),
@@ -7244,6 +7248,7 @@ class App extends React.Component<AppProps, AppState> {
             ? fontSize
             : null,
         fontFamily,
+        bold,
         textAlign:
           arrowEndpointBinding?.textAlign ??
           (parentCenterPosition ? "center" : this.state.currentItemTextAlign),
@@ -12260,6 +12265,7 @@ class App extends React.Component<AppProps, AppState> {
           getFontString({
             fontSize: newElement.fontSize,
             fontFamily: newElement.fontFamily,
+            bold: newElement.bold,
           }),
           newElement.lineHeight,
         );

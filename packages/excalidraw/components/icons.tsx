@@ -1803,6 +1803,22 @@ export const TextAlignRightIcon = createIcon(
   tablerIconProps,
 );
 
+// tabler-icons: bold
+export const TextBoldIcon = createIcon(
+  <g
+    stroke="currentColor"
+    fill="none"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M7 5h6a3.5 3.5 0 0 1 0 7h-6z" />
+    <path d="M13 12h1a3.5 3.5 0 0 1 0 7h-7v-7" />
+  </g>,
+  tablerIconProps,
+);
+
 // tabler-icons: layout-align-top
 export const TextAlignTopIcon = React.memo(({ theme }: { theme: Theme }) =>
   createIcon(

@@ -135,15 +135,19 @@ export const getFontFamilyString = ({
   return WINDOWS_EMOJI_FALLBACK_FONT;
 };
 
-/** returns fontSize+fontFamily string for assignment to DOM elements */
+/** returns weight+fontSize+fontFamily string for assignment to DOM elements (excalidraw-web: the weight, for bold text) */
 export const getFontString = ({
   fontSize,
   fontFamily,
+  bold,
 }: {
   fontSize: number;
   fontFamily: FontFamilyValues;
+  bold?: boolean;
 }) => {
-  return `${fontSize}px ${getFontFamilyString({ fontFamily })}` as FontString;
+  return `${bold ? "bold " : ""}${fontSize}px ${getFontFamilyString({
+    fontFamily,
+  })}` as FontString;
 };
 
 /** executes callback in the frame that's after the current one */

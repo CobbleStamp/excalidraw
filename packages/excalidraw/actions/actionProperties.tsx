@@ -158,6 +158,7 @@ import {
   ArrowheadCardinalityZeroOrOneIcon,
   strokeVariabilityConstantIcon,
   strokeVariabilityVariableIcon,
+  TextBoldIcon,
 } from "../components/icons";
 
 import { Fonts } from "../fonts";
@@ -182,7 +183,12 @@ import {
 } from "./colorTargets";
 import { register } from "./register";
 
-import type { AppClassProperties, AppState, Primitive } from "../types";
+import type {
+  AppClassProperties,
+  AppState,
+  Primitive,
+  UIAppState,
+} from "../types";
 
 const FONT_SIZE_RELATIVE_INCREASE_STEP = 0.1;
 
@@ -1146,6 +1152,42 @@ export const actionIncreaseFontSize = register({
   },
 });
 
+/**
+ * excalidraw-web: re-measures texts once their font faces load, as they were measured with a
+ * stand-in font until then.
+ */
+const redrawTextsOnceLoaded = (
+  fontsLoading: Promise<FontFace[]>,
+  elementContainerMapping: ReadonlyMap<
+    ExcalidrawTextElement,
+    ExcalidrawElement | null
+  >,
+  app: AppClassProperties,
+): void => {
+  const redraw = (fontFaces: FontFace[]): void => {
+    for (const [element, container] of elementContainerMapping) {
+      // use latest element state to ensure we don't have closure over an old instance in order to avoid possible race conditions (i.e. font faces load out-of-order while rapidly switching fonts)
+      const latestElement = app.scene.getElement(element.id);
+      const latestContainer = container
+        ? app.scene.getElement(container.id)
+        : null;
+
+      if (latestElement) {
+        // trigger async redraw
+        redrawTextBoundingBox(
+          latestElement as ExcalidrawTextElement,
+          latestContainer,
+          app.scene,
+        );
+      }
+    }
+
+    // trigger update once we've mutated all the elements, which also updates our cache
+    app.fonts.onLoaded(fontFaces);
+  };
+  fontsLoading.then(redraw);
+};
+
 type ChangeFontFamilyData = Partial<
   Pick<
     AppState,
@@ -1329,8 +1371,20 @@ export const actionChangeFontFamily = register<{
       })}`;
       const chars = Array.from(uniqueChars.values()).join();
       const ownerDocument = app.props.ownerDocument ?? document;
+      const isBoldText = (element: ExcalidrawTextElement): boolean =>
+        element.bold === true;
+      // excalidraw-web: bold text draws with the family's bold face, a face of its own
+      const fontStrings: string[] = Array.from(
+        elementContainerMapping.keys(),
+      ).some(isBoldText)
+        ? [fontString, `bold ${fontString}`]
+        : [fontString];
+      const isLoaded = (font: string): boolean =>
+        ownerDocument.fonts.check(font, chars);
+      const load = (font: string): Promise<FontFace[]> =>
+        ownerDocument.fonts.load(font, chars);
 
-      if (skipFontFaceCheck || ownerDocument.fonts.check(fontString, chars)) {
+      if (skipFontFaceCheck || fontStrings.every(isLoaded)) {
         // we either skip the check (have at least one font face loaded) or do the check and find out all the font faces have loaded
         for (const [element, container] of elementContainerMapping) {
           // trigger synchronous redraw
@@ -1338,27 +1392,18 @@ export const actionChangeFontFamily = register<{
         }
       } else {
         // otherwise try to load all font faces for the given chars and redraw elements once our font faces loaded
-        ownerDocument.fonts.load(fontString, chars).then((fontFaces) => {
-          for (const [element, container] of elementContainerMapping) {
-            // use latest element state to ensure we don't have closure over an old instance in order to avoid possible race conditions (i.e. font faces load out-of-order while rapidly switching fonts)
-            const latestElement = app.scene.getElement(element.id);
-            const latestContainer = container
-              ? app.scene.getElement(container.id)
-              : null;
-
-            if (latestElement) {
-              // trigger async redraw
-              redrawTextBoundingBox(
-                latestElement as ExcalidrawTextElement,
-                latestContainer,
-                app.scene,
-              );
-            }
-          }
-
-          // trigger update once we've mutated all the elements, which also updates our cache
-          app.fonts.onLoaded(fontFaces);
-        });
+        // excalidraw-web: a weight that fails to load keeps the other's redraw
+        const loadedFaces = (
+          loads: PromiseSettledResult<FontFace[]>[],
+        ): FontFace[] =>
+          loads.flatMap((settled) =>
+            settled.status === "fulfilled" ? settled.value : [],
+          );
+        redrawTextsOnceLoaded(
+          Promise.allSettled(fontStrings.map(load)).then(loadedFaces),
+          elementContainerMapping,
+          app,
+        );
       }
     }
 
@@ -1644,6 +1689,129 @@ export const actionChangeTextAlign = register<TextAlign>({
                 data?.onPreventClose,
               );
             }}
+          />
+        </div>
+      </fieldset>
+    );
+  },
+});
+
+/**
+ * excalidraw-web: the texts the bold toggle changes: the selected texts, the texts of the
+ * selected shapes, and the text being edited.
+ */
+const getBoldTargets = (
+  elements: readonly ExcalidrawElement[],
+  appState: UIAppState,
+): ExcalidrawTextElement[] => {
+  const idOf = (element: ExcalidrawElement): string => element.id;
+  const selectedIds: Set<string> = new Set(
+    getSelectedElements(elements, appState, {
+      includeBoundTextElement: true,
+    }).map(idOf),
+  );
+  const isTarget = (
+    element: ExcalidrawElement,
+  ): element is ExcalidrawTextElement =>
+    isTextElement(element) &&
+    !element.isDeleted &&
+    (selectedIds.has(element.id) ||
+      element.id === appState.editingTextElement?.id);
+  return elements.filter(isTarget);
+};
+
+/**
+ * excalidraw-web: whether the bold toggle shows as on: every text it changes is bold, or,
+ * with none, new text is.
+ */
+const isBoldOn = (
+  elements: readonly ExcalidrawElement[],
+  appState: UIAppState,
+): boolean => {
+  const targets: ExcalidrawTextElement[] = getBoldTargets(elements, appState);
+  const isBold = (element: ExcalidrawTextElement): boolean =>
+    element.bold === true;
+  return targets.length > 0 ? targets.every(isBold) : appState.currentItemBold;
+};
+
+/**
+ * excalidraw-web: makes the selected or edited texts, and new text, bold or regular. With
+ * no value (Ctrl/Cmd+B) it turns them bold unless all already are.
+ */
+export const actionToggleBold = register({
+  name: "toggleBold",
+  label: "labels.bold",
+  icon: TextBoldIcon,
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    const bold: boolean =
+      typeof value === "boolean" ? value : !isBoldOn(elements, appState);
+    const redrawn: Map<ExcalidrawTextElement, ExcalidrawElement | null> =
+      new Map();
+    const toggleText = (oldElement: ExcalidrawElement): ExcalidrawElement => {
+      if (!isTextElement(oldElement)) {
+        return oldElement;
+      }
+      const newElement: ExcalidrawTextElement = newElementWith(oldElement, {
+        bold,
+      });
+      const container = app.scene.getContainerElement(oldElement);
+      redrawTextBoundingBox(newElement, container, app.scene);
+      redrawn.set(newElement, container);
+      return newElement;
+    };
+    const nextElements = changeProperty(elements, appState, toggleText, true);
+    if (bold) {
+      // measured with a stand-in until a family's bold face loads
+      redrawTextsOnceLoaded(
+        Fonts.loadElementsFonts(
+          Array.from(redrawn.keys()),
+          app.props.ownerDocument ?? document,
+        ),
+        redrawn,
+        app,
+      );
+    }
+    return {
+      elements: nextElements,
+      appState: { ...appState, currentItemBold: bold },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  keyTest: (event) =>
+    event[KEYS.CTRL_OR_CMD] &&
+    !event.shiftKey &&
+    !event.altKey &&
+    event.key.toLowerCase() === KEYS.B,
+  PanelComponent: ({ elements, appState, updateData, app, data }) => {
+    const { isCompact } = getStylesPanelInfo(app);
+    const isOn: boolean = isBoldOn(elements, appState);
+    const toggle = () => {
+      withCaretPositionPreservation(
+        () => updateData(!isOn),
+        isCompact,
+        !!appState.editingTextElement,
+        data?.onPreventClose,
+      );
+    };
+
+    return (
+      <fieldset>
+        <legend>{t("labels.textStyle")}</legend>
+        <div className="buttonList">
+          <RadioSelection<boolean>
+            type="button"
+            options={[
+              {
+                value: true,
+                text: `${t("labels.bold")} — ${getShortcutKey("CtrlOrCmd+B")}`,
+                icon: TextBoldIcon,
+                testId: "text-bold",
+                active: isOn,
+              },
+            ]}
+            value={isOn}
+            onClick={toggle}
           />
         </div>
       </fieldset>

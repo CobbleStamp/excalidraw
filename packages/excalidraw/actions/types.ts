@@ -98,6 +98,7 @@ export type ActionName =
   | "zoomToFitSelectionInViewport"
   | "changeFontFamily"
   | "changeTextAlign"
+  | "toggleBold"
   | "changeVerticalAlign"
   | "toggleFullScreen"
   | "toggleShortcuts"

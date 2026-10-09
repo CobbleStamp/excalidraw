@@ -74,6 +74,7 @@ const truncateText = (
   ctx.font = getFontString({
     fontFamily: element.fontFamily,
     fontSize: element.fontSize,
+    bold: element.bold,
   });
 
   let text = element.text;
